@@ -1,0 +1,310 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Django specific
+media/
+staticfiles/
+static/
+logs/
+*.log
+
+# Database
+*.sqlite3
+*.db
+
+# Configuration files with sensitive data
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+local_settings.py
+settings_local.py
+
+# Node.js / React specific
+frontend/agronexus-web/node_modules/
+frontend/agronexus-web/npm-debug.log*
+frontend/agronexus-web/yarn-debug.log*
+frontend/agronexus-web/yarn-error.log*
+frontend/agronexus-web/.npm
+frontend/agronexus-web/.yarn-integrity
+
+# Build outputs
+frontend/agronexus-web/build/
+frontend/agronexus-web/dist/
+
+# Runtime data
+frontend/agronexus-web/pids
+frontend/agronexus-web/*.pid
+frontend/agronexus-web/*.seed
+frontend/agronexus-web/*.pid.lock
+
+# Coverage directory used by tools like istanbul
+frontend/agronexus-web/coverage/
+frontend/agronexus-web/.nyc_output
+
+# Grunt intermediate storage
+frontend/agronexus-web/.grunt
+
+# Bower dependency directory
+frontend/agronexus-web/bower_components
+
+# node-waf configuration
+frontend/agronexus-web/.lock-wscript
+
+# Compiled binary addons
+frontend/agronexus-web/build/Release
+
+# Dependency directories
+frontend/agronexus-web/jspm_packages/
+
+# TypeScript cache
+frontend/agronexus-web/*.tsbuildinfo
+
+# Optional npm cache directory
+frontend/agronexus-web/.npm
+
+# Optional eslint cache
+frontend/agronexus-web/.eslintcache
+
+# Microbundle cache
+frontend/agronexus-web/.rpt2_cache/
+frontend/agronexus-web/.rts2_cache_cjs/
+frontend/agronexus-web/.rts2_cache_es/
+frontend/agronexus-web/.rts2_cache_umd/
+
+# Optional REPL history
+frontend/agronexus-web/.node_repl_history
+
+# Output of 'npm pack'
+frontend/agronexus-web/*.tgz
+
+# Yarn Integrity file
+frontend/agronexus-web/.yarn-integrity
+
+# dotenv environment variables file
+frontend/agronexus-web/.env
+frontend/agronexus-web/.env.test
+frontend/agronexus-web/.env.local
+frontend/agronexus-web/.env.development.local
+frontend/agronexus-web/.env.test.local
+frontend/agronexus-web/.env.production.local
+
+# parcel-bundler cache
+frontend/agronexus-web/.cache
+frontend/agronexus-web/.parcel-cache
+
+# Next.js build output
+frontend/agronexus-web/.next
+
+# Nuxt.js build / generate output
+frontend/agronexus-web/.nuxt
+frontend/agronexus-web/dist
+
+# Gatsby files
+frontend/agronexus-web/.cache/
+frontend/agronexus-web/public
+
+# Storybook build outputs
+frontend/agronexus-web/.out
+frontend/agronexus-web/.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Certificate files
+*.pem
+*.key
+*.crt
+*.csr
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Custom application files
+uploads/
+downloads/
+backups/
+exports/
+
+# Redis dump file
+dump.rdb
+
+# Celery beat schedule file
+celerybeat-schedule.db
+
+# Local development scripts
+dev_*.py
+test_*.py
+debug_*.py
+
+# Documentation builds
+docs/build/
+docs/_build/
+
+# Pytest
+.pytest_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+
+# Backup of original files
+*.orig
+
+# Temporary files
+*.tmp
+*.temp

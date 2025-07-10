@@ -1,4 +1,4 @@
-# AgroNexus - Sistema Fertili 🐄
+# AgroNexus - Sistema de Gestão Pecuária 🐄
 
 Sistema completo de gestão pecuária desenvolvido com Django e Django REST Framework. O AgroNexus oferece uma solução integrada para gerenciamento de propriedades rurais, rebanhos, sanidade animal, reprodução, controle financeiro e muito mais.
 

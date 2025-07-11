@@ -1,39 +1,45 @@
 """
-AgroNexus - Sistema Fertili
+AgroNexus - Sistema 
 Serializers para API REST
 """
 
-from rest_framework import serializers
-from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
+from datetime import date, timedelta
+from decimal import Decimal
+
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from decimal import Decimal
-from datetime import date, timedelta
+from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
-from ...models import (
-    Usuario, Propriedade, Area, Animal, Lote, HistoricoLoteAnimal, HistoricoOcupacaoArea,
-    Manejo, AnimalManejo, Pesagem, EstacaoMonta, ProtocoloIATF, Inseminacao, DiagnosticoGestacao,
-    Parto, Vacina, Medicamento, Vacinacao, AdministracaoMedicamento, CalendarioSanitario,
-    ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, RelatorioPersonalizado,
-    ConfiguracaoSistema
-)
-
+from ...models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
+                       CalendarioSanitario, CategoriaFinanceira,
+                       ConfiguracaoSistema, ContaFinanceira,
+                       DiagnosticoGestacao, EstacaoMonta, HistoricoLoteAnimal,
+                       HistoricoOcupacaoArea, Inseminacao,
+                       LancamentoFinanceiro, Lote, Manejo, Medicamento, Parto,
+                       Pesagem, Propriedade, ProtocoloIATF,
+                       RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
 
 # ============================================================================
 # SERIALIZERS DE USUÁRIOS E AUTENTICAÇÃO
 # ============================================================================
 
+
 class UsuarioSerializer(serializers.ModelSerializer):
-    """Serializer para usuários"""
-    password = serializers.CharField(write_only=True, validators=[validate_password])
+    """Serializer para usuários com sistema de grupos"""
+    password = serializers.CharField(
+        write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
-    
+    grupos = serializers.SerializerMethodField()
+    perfil = serializers.CharField(source='perfil_principal', read_only=True)
+
     class Meta:
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'password', 'password_confirm',
-            'perfil', 'telefone', 'cpf', 'data_nascimento', 'ativo', 'date_joined', 'data_criacao'
+            'telefone', 'cpf', 'data_nascimento', 'ativo', 'date_joined', 'data_criacao',
+            'grupos', 'perfil'
         ]
         read_only_fields = ['id', 'date_joined', 'data_criacao']
         extra_kwargs = {
@@ -41,12 +47,16 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'first_name': {'required': True},
             'last_name': {'required': True},
         }
-    
+
+    def get_grupos(self, obj):
+        """Retorna os grupos do usuário"""
+        return [grupo.name for grupo in obj.groups.all()]
+
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError("As senhas não coincidem.")
         return attrs
-    
+
     def create(self, validated_data):
         validated_data.pop('password_confirm')
         password = validated_data.pop('password')
@@ -56,10 +66,59 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return user
 
 
+class UsuarioCreateSerializer(serializers.ModelSerializer):
+    """Serializer para criação de usuários com grupo"""
+    password = serializers.CharField(
+        write_only=True, validators=[validate_password])
+    password_confirm = serializers.CharField(write_only=True)
+    grupo = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Usuario
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 'password', 'password_confirm',
+            'telefone', 'cpf', 'data_nascimento', 'ativo', 'grupo'
+        ]
+        read_only_fields = ['id']
+        extra_kwargs = {
+            'email': {'required': True},
+            'first_name': {'required': True},
+            'last_name': {'required': True},
+        }
+
+    def validate_grupo(self, value):
+        """Valida se o grupo existe"""
+        from django.contrib.auth.models import Group
+        if not Group.objects.filter(name=value).exists():
+            raise serializers.ValidationError(f'Grupo "{value}" não existe.')
+        return value
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError("As senhas não coincidem.")
+        return attrs
+
+    def create(self, validated_data):
+        grupo_nome = validated_data.pop('grupo')
+        validated_data.pop('password_confirm')
+        password = validated_data.pop('password')
+
+        user = Usuario.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save()
+
+        # Adicionar ao grupo
+        user.add_perfil(grupo_nome)
+
+        return user
+
+
 class UsuarioResumoSerializer(serializers.ModelSerializer):
     """Serializer resumido para usuários"""
-    nome_completo = serializers.CharField(source='get_full_name', read_only=True)
-    
+    nome_completo = serializers.CharField(
+        source='get_full_name', read_only=True)
+    perfil = serializers.CharField(source='perfil_principal', read_only=True)
+
     class Meta:
         model = Usuario
         fields = ['id', 'username', 'nome_completo', 'perfil', 'ativo']
@@ -72,12 +131,14 @@ class UsuarioResumoSerializer(serializers.ModelSerializer):
 class PropriedadeSerializer(serializers.ModelSerializer):
     """Serializer para propriedades"""
     proprietario = UsuarioResumoSerializer(read_only=True)
-    area_ocupada = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    taxa_ocupacao_global = serializers.DecimalField(max_digits=8, decimal_places=4, read_only=True)
+    area_ocupada = serializers.DecimalField(
+        max_digits=10, decimal_places=2, read_only=True)
+    taxa_ocupacao_global = serializers.DecimalField(
+        max_digits=8, decimal_places=4, read_only=True)
     total_animais = serializers.IntegerField(read_only=True)
     total_lotes = serializers.IntegerField(read_only=True)
     total_areas = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = Propriedade
         fields = [
@@ -90,7 +151,7 @@ class PropriedadeSerializer(serializers.ModelSerializer):
 
 class PropriedadeResumoSerializer(serializers.ModelSerializer):
     """Serializer resumido para propriedades"""
-    
+
     class Meta:
         model = Propriedade
         fields = ['id', 'nome', 'area_total_ha', 'ativa']
@@ -101,9 +162,10 @@ class AreaSerializer(serializers.ModelSerializer):
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
     lote_atual = serializers.StringRelatedField(read_only=True)
-    taxa_ocupacao_atual = serializers.DecimalField(max_digits=8, decimal_places=4, read_only=True)
+    taxa_ocupacao_atual = serializers.DecimalField(
+        max_digits=8, decimal_places=4, read_only=True)
     periodo_ocupacao_atual = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = Area
         fields = [
@@ -122,7 +184,7 @@ class AreaSerializer(serializers.ModelSerializer):
 
 class AreaResumoSerializer(serializers.ModelSerializer):
     """Serializer resumido para áreas"""
-    
+
     class Meta:
         model = Area
         fields = ['id', 'nome', 'tipo', 'tamanho_ha', 'status']
@@ -137,14 +199,17 @@ class AnimalSerializer(serializers.ModelSerializer):
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
     lote_atual = serializers.StringRelatedField(read_only=True)
-    lote_atual_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    lote_atual_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     pai = serializers.StringRelatedField(read_only=True)
     mae = serializers.StringRelatedField(read_only=True)
     idade_dias = serializers.IntegerField(read_only=True)
     idade_meses = serializers.IntegerField(read_only=True)
-    peso_atual = serializers.DecimalField(max_digits=6, decimal_places=2, read_only=True)
-    ua_value = serializers.DecimalField(max_digits=8, decimal_places=4, read_only=True)
-    
+    peso_atual = serializers.DecimalField(
+        max_digits=6, decimal_places=2, read_only=True)
+    ua_value = serializers.DecimalField(
+        max_digits=8, decimal_places=4, read_only=True)
+
     class Meta:
         model = Animal
         fields = [
@@ -167,8 +232,9 @@ class AnimalSerializer(serializers.ModelSerializer):
 class AnimalResumoSerializer(serializers.ModelSerializer):
     """Serializer resumido para animais"""
     idade_meses = serializers.IntegerField(read_only=True)
-    peso_atual = serializers.DecimalField(max_digits=6, decimal_places=2, read_only=True)
-    
+    peso_atual = serializers.DecimalField(
+        max_digits=6, decimal_places=2, read_only=True)
+
     class Meta:
         model = Animal
         fields = [
@@ -182,12 +248,16 @@ class LoteSerializer(serializers.ModelSerializer):
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
     area_atual = AreaResumoSerializer(read_only=True)
-    area_atual_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    area_atual_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     total_animais = serializers.IntegerField(read_only=True)
-    total_ua = serializers.DecimalField(max_digits=8, decimal_places=4, read_only=True)
-    peso_medio = serializers.DecimalField(max_digits=6, decimal_places=2, read_only=True)
-    gmd_medio = serializers.DecimalField(max_digits=5, decimal_places=3, read_only=True)
-    
+    total_ua = serializers.DecimalField(
+        max_digits=8, decimal_places=4, read_only=True)
+    peso_medio = serializers.DecimalField(
+        max_digits=6, decimal_places=2, read_only=True)
+    gmd_medio = serializers.DecimalField(
+        max_digits=5, decimal_places=3, read_only=True)
+
     class Meta:
         model = Lote
         fields = [
@@ -207,7 +277,7 @@ class LoteSerializer(serializers.ModelSerializer):
 class LoteResumoSerializer(serializers.ModelSerializer):
     """Serializer resumido para lotes"""
     total_animais = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = Lote
         fields = ['id', 'nome', 'total_animais', 'ativo']
@@ -228,10 +298,11 @@ class ManejoSerializer(serializers.ModelSerializer):
         required=False
     )
     lote = LoteResumoSerializer(read_only=True)
-    lote_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    lote_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     usuario = UsuarioResumoSerializer(read_only=True)
     total_animais = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = Manejo
         fields = [
@@ -247,8 +318,9 @@ class PesagemSerializer(serializers.ModelSerializer):
     animal = AnimalResumoSerializer(read_only=True)
     animal_id = serializers.UUIDField(write_only=True)
     manejo = ManejoSerializer(read_only=True)
-    gmd_anterior = serializers.DecimalField(max_digits=5, decimal_places=3, read_only=True)
-    
+    gmd_anterior = serializers.DecimalField(
+        max_digits=5, decimal_places=3, read_only=True)
+
     class Meta:
         model = Pesagem
         fields = [
@@ -273,8 +345,9 @@ class EstacaoMontaSerializer(serializers.ModelSerializer):
         required=False
     )
     total_femeas = serializers.IntegerField(read_only=True)
-    taxa_prenhez = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
-    
+    taxa_prenhez = serializers.DecimalField(
+        max_digits=5, decimal_places=2, read_only=True)
+
     class Meta:
         model = EstacaoMonta
         fields = [
@@ -289,7 +362,7 @@ class ProtocoloIATFSerializer(serializers.ModelSerializer):
     """Serializer para protocolos IATF"""
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
-    
+
     class Meta:
         model = ProtocoloIATF
         fields = [
@@ -305,13 +378,16 @@ class InseminacaoSerializer(serializers.ModelSerializer):
     animal_id = serializers.UUIDField(write_only=True)
     manejo = ManejoSerializer(read_only=True)
     reprodutor = AnimalResumoSerializer(read_only=True)
-    reprodutor_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    reprodutor_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     protocolo_iatf = ProtocoloIATFSerializer(read_only=True)
-    protocolo_iatf_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    protocolo_iatf_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     estacao_monta = EstacaoMontaSerializer(read_only=True)
-    estacao_monta_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    estacao_monta_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     data_diagnostico_prevista = serializers.DateField(read_only=True)
-    
+
     class Meta:
         model = Inseminacao
         fields = [
@@ -329,7 +405,7 @@ class DiagnosticoGestacaoSerializer(serializers.ModelSerializer):
     inseminacao_id = serializers.UUIDField(write_only=True)
     manejo = ManejoSerializer(read_only=True)
     data_parto_prevista = serializers.DateField(read_only=True)
-    
+
     class Meta:
         model = DiagnosticoGestacao
         fields = [
@@ -345,8 +421,9 @@ class PartoSerializer(serializers.ModelSerializer):
     mae_id = serializers.UUIDField(write_only=True)
     manejo = ManejoSerializer(read_only=True)
     bezerro = AnimalResumoSerializer(read_only=True)
-    bezerro_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
-    
+    bezerro_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = Parto
         fields = [
@@ -362,7 +439,7 @@ class PartoSerializer(serializers.ModelSerializer):
 
 class VacinaSerializer(serializers.ModelSerializer):
     """Serializer para vacinas"""
-    
+
     class Meta:
         model = Vacina
         fields = [
@@ -374,7 +451,7 @@ class VacinaSerializer(serializers.ModelSerializer):
 
 class MedicamentoSerializer(serializers.ModelSerializer):
     """Serializer para medicamentos"""
-    
+
     class Meta:
         model = Medicamento
         fields = [
@@ -389,7 +466,7 @@ class VacinacaoSerializer(serializers.ModelSerializer):
     manejo = ManejoSerializer(read_only=True)
     vacina = VacinaSerializer(read_only=True)
     vacina_id = serializers.UUIDField(write_only=True)
-    
+
     class Meta:
         model = Vacinacao
         fields = [
@@ -404,7 +481,7 @@ class AdministracaoMedicamentoSerializer(serializers.ModelSerializer):
     manejo = ManejoSerializer(read_only=True)
     medicamento = MedicamentoSerializer(read_only=True)
     medicamento_id = serializers.UUIDField(write_only=True)
-    
+
     class Meta:
         model = AdministracaoMedicamento
         fields = [
@@ -431,12 +508,14 @@ class CalendarioSanitarioSerializer(serializers.ModelSerializer):
         required=False
     )
     vacina = VacinaSerializer(read_only=True)
-    vacina_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    vacina_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     medicamento = MedicamentoSerializer(read_only=True)
-    medicamento_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    medicamento_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     manejo_realizado = ManejoSerializer(read_only=True)
     usuario = UsuarioResumoSerializer(read_only=True)
-    
+
     class Meta:
         model = CalendarioSanitario
         fields = [
@@ -456,8 +535,9 @@ class ContaFinanceiraSerializer(serializers.ModelSerializer):
     """Serializer para contas financeiras"""
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
-    saldo_atual = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
-    
+    saldo_atual = serializers.DecimalField(
+        max_digits=12, decimal_places=2, read_only=True)
+
     class Meta:
         model = ContaFinanceira
         fields = [
@@ -471,7 +551,7 @@ class CategoriaFinanceiraSerializer(serializers.ModelSerializer):
     """Serializer para categorias financeiras"""
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
-    
+
     class Meta:
         model = CategoriaFinanceira
         fields = [
@@ -491,17 +571,21 @@ class LancamentoFinanceiroSerializer(serializers.ModelSerializer):
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
     categoria = CategoriaFinanceiraSerializer(read_only=True)
-    categoria_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    categoria_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     conta_origem = ContaFinanceiraSerializer(read_only=True)
     conta_origem_id = serializers.UUIDField(write_only=True)
     conta_destino = ContaFinanceiraSerializer(read_only=True)
-    conta_destino_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    conta_destino_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     manejo_relacionado = ManejoSerializer(read_only=True)
-    manejo_relacionado_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    manejo_relacionado_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     animal_relacionado = AnimalResumoSerializer(read_only=True)
-    animal_relacionado_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    animal_relacionado_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     usuario = UsuarioResumoSerializer(read_only=True)
-    
+
     class Meta:
         model = LancamentoFinanceiro
         fields = [
@@ -523,7 +607,7 @@ class RelatorioPersonalizadoSerializer(serializers.ModelSerializer):
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
     usuario = UsuarioResumoSerializer(read_only=True)
-    
+
     class Meta:
         model = RelatorioPersonalizado
         fields = [
@@ -537,7 +621,7 @@ class ConfiguracaoSistemaSerializer(serializers.ModelSerializer):
     """Serializer para configurações do sistema"""
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
-    
+
     class Meta:
         model = ConfiguracaoSistema
         fields = [
@@ -557,7 +641,7 @@ class HistoricoLoteAnimalSerializer(serializers.ModelSerializer):
     animal = AnimalResumoSerializer(read_only=True)
     lote = LoteResumoSerializer(read_only=True)
     usuario = UsuarioResumoSerializer(read_only=True)
-    
+
     class Meta:
         model = HistoricoLoteAnimal
         fields = [
@@ -573,7 +657,7 @@ class HistoricoOcupacaoAreaSerializer(serializers.ModelSerializer):
     area = AreaResumoSerializer(read_only=True)
     usuario = UsuarioResumoSerializer(read_only=True)
     periodo_ocupacao = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = HistoricoOcupacaoArea
         fields = [

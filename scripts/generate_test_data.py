@@ -2,23 +2,24 @@
 # -*- coding: utf-8 -*-
 
 """
-AgroNexus - Sistema Fertili
+AgroNexus - Sistema 
 Script para gerar dados de teste
 """
 
+from agronexus.models import *
 import os
-import sys
-import django
-from datetime import date, timedelta, datetime
-from decimal import Decimal
 import random
+import sys
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+
+import django
 from faker import Faker
 
 # Configurar Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from agronexus.models import *
 
 # Configurar Faker para português
 fake = Faker('pt_BR')
@@ -26,6 +27,8 @@ fake = Faker('pt_BR')
 print("🎲 Gerando dados de teste para AgroNexus...")
 
 # Limpar dados existentes (cuidado!)
+
+
 def limpar_dados():
     confirm = input("⚠️  Deseja limpar todos os dados existentes? (s/N): ")
     if confirm.lower() == 's':
@@ -37,9 +40,11 @@ def limpar_dados():
         print("✅ Dados limpos!")
 
 # Criar usuários de teste
+
+
 def criar_usuarios():
     print("👥 Criando usuários de teste...")
-    
+
     # Usuários já existem, vamos criar alguns adicionais
     usuarios = [
         {
@@ -67,7 +72,7 @@ def criar_usuarios():
             'perfil': 'veterinario'
         }
     ]
-    
+
     for user_data in usuarios:
         if not Usuario.objects.filter(username=user_data['username']).exists():
             usuario = Usuario.objects.create_user(
@@ -81,11 +86,13 @@ def criar_usuarios():
             print(f"✅ Usuário criado: {usuario.username}")
 
 # Criar propriedades
+
+
 def criar_propriedades():
     print("🏠 Criando propriedades de teste...")
-    
+
     proprietario = Usuario.objects.filter(is_superuser=True).first()
-    
+
     propriedades = [
         {
             'nome': 'Fazenda Santa Maria',
@@ -102,7 +109,7 @@ def criar_propriedades():
             'cnpj_cpf': '98.765.432/0001-10'
         }
     ]
-    
+
     propriedades_criadas = []
     for prop_data in propriedades:
         propriedade = Propriedade.objects.create(
@@ -111,27 +118,37 @@ def criar_propriedades():
         )
         propriedades_criadas.append(propriedade)
         print(f"✅ Propriedade criada: {propriedade.nome}")
-    
+
     return propriedades_criadas
 
 # Criar áreas
+
+
 def criar_areas(propriedades):
     print("🌱 Criando áreas/piquetes...")
-    
+
     areas_criadas = []
     for propriedade in propriedades:
         # Criar áreas para cada propriedade
         areas = [
-            {'nome': 'Piquete A1', 'tipo': 'piquete', 'tamanho_ha': Decimal('50.00'), 'tipo_forragem': 'Brachiaria brizantha'},
-            {'nome': 'Piquete A2', 'tipo': 'piquete', 'tamanho_ha': Decimal('45.50'), 'tipo_forragem': 'Brachiaria decumbens'},
-            {'nome': 'Piquete B1', 'tipo': 'piquete', 'tamanho_ha': Decimal('60.00'), 'tipo_forragem': 'Panicum maximum'},
-            {'nome': 'Piquete B2', 'tipo': 'piquete', 'tamanho_ha': Decimal('55.25'), 'tipo_forragem': 'Cynodon dactylon'},
-            {'nome': 'Curral Central', 'tipo': 'curral', 'tamanho_ha': Decimal('2.00'), 'tipo_forragem': ''},
-            {'nome': 'Baia Maternidade', 'tipo': 'baia', 'tamanho_ha': Decimal('1.50'), 'tipo_forragem': ''},
-            {'nome': 'Apartação', 'tipo': 'apartacao', 'tamanho_ha': Decimal('3.00'), 'tipo_forragem': ''},
-            {'nome': 'Enfermaria', 'tipo': 'enfermaria', 'tamanho_ha': Decimal('1.00'), 'tipo_forragem': ''},
+            {'nome': 'Piquete A1', 'tipo': 'piquete', 'tamanho_ha': Decimal(
+                '50.00'), 'tipo_forragem': 'Brachiaria brizantha'},
+            {'nome': 'Piquete A2', 'tipo': 'piquete', 'tamanho_ha': Decimal(
+                '45.50'), 'tipo_forragem': 'Brachiaria decumbens'},
+            {'nome': 'Piquete B1', 'tipo': 'piquete', 'tamanho_ha': Decimal(
+                '60.00'), 'tipo_forragem': 'Panicum maximum'},
+            {'nome': 'Piquete B2', 'tipo': 'piquete', 'tamanho_ha': Decimal(
+                '55.25'), 'tipo_forragem': 'Cynodon dactylon'},
+            {'nome': 'Curral Central', 'tipo': 'curral',
+                'tamanho_ha': Decimal('2.00'), 'tipo_forragem': ''},
+            {'nome': 'Baia Maternidade', 'tipo': 'baia',
+                'tamanho_ha': Decimal('1.50'), 'tipo_forragem': ''},
+            {'nome': 'Apartação', 'tipo': 'apartacao',
+                'tamanho_ha': Decimal('3.00'), 'tipo_forragem': ''},
+            {'nome': 'Enfermaria', 'tipo': 'enfermaria',
+                'tamanho_ha': Decimal('1.00'), 'tipo_forragem': ''},
         ]
-        
+
         for area_data in areas:
             area = Area.objects.create(
                 propriedade=propriedade,
@@ -139,13 +156,15 @@ def criar_areas(propriedades):
             )
             areas_criadas.append(area)
             print(f"✅ Área criada: {area.nome} - {propriedade.nome}")
-    
+
     return areas_criadas
 
 # Criar lotes
+
+
 def criar_lotes(propriedades, areas):
     print("🐄 Criando lotes de animais...")
-    
+
     lotes_criados = []
     for propriedade in propriedades:
         lotes = [
@@ -168,7 +187,7 @@ def criar_lotes(propriedades, areas):
                 'area_atual': random.choice([a for a in areas if a.propriedade == propriedade and a.tipo == 'piquete'])
             }
         ]
-        
+
         for lote_data in lotes:
             lote = Lote.objects.create(
                 propriedade=propriedade,
@@ -176,23 +195,26 @@ def criar_lotes(propriedades, areas):
             )
             lotes_criados.append(lote)
             print(f"✅ Lote criado: {lote.nome} - {propriedade.nome}")
-    
+
     return lotes_criados
 
 # Criar animais
+
+
 def criar_animais(propriedades, lotes):
     print("🐄 Criando animais...")
-    
-    racas = ['Nelore', 'Brahman', 'Gir', 'Guzerá', 'Tabapuã', 'Angus', 'Hereford', 'Senepol']
+
+    racas = ['Nelore', 'Brahman', 'Gir', 'Guzerá',
+             'Tabapuã', 'Angus', 'Hereford', 'Senepol']
     animais_criados = []
-    
+
     for propriedade in propriedades:
         lotes_propriedade = [l for l in lotes if l.propriedade == propriedade]
-        
+
         # Criar animais para cada lote
         for lote in lotes_propriedade:
             qtd_animais = random.randint(15, 30)
-            
+
             for i in range(qtd_animais):
                 # Determinar sexo baseado no lote
                 if 'Vacas' in lote.nome or 'Novilhas' in lote.nome:
@@ -204,43 +226,51 @@ def criar_animais(propriedades, lotes):
                 else:
                     sexo = 'M'
                     categoria = 'bezerro' if 'Bezerros' in lote.nome else 'novilho'
-                
+
                 animal = Animal.objects.create(
                     propriedade=propriedade,
                     identificacao_unica=f"{propriedade.nome[:3].upper()}{random.randint(1000, 9999)}",
-                    nome_registro=fake.first_name() if random.choice([True, False]) else '',
+                    nome_registro=fake.first_name() if random.choice(
+                        [True, False]) else '',
                     sexo=sexo,
-                    data_nascimento=fake.date_between(start_date='-5y', end_date='-6m'),
+                    data_nascimento=fake.date_between(
+                        start_date='-5y', end_date='-6m'),
                     raca=random.choice(racas),
                     categoria=categoria,
                     lote_atual=lote
                 )
                 animais_criados.append(animal)
-        
-        print(f"✅ {len([a for a in animais_criados if a.propriedade == propriedade])} animais criados para {propriedade.nome}")
-    
+
+        print(
+            f"✅ {len([a for a in animais_criados if a.propriedade == propriedade])} animais criados para {propriedade.nome}")
+
     return animais_criados
 
 # Criar pesagens
+
+
 def criar_pesagens(animais):
     print("⚖️  Criando pesagens...")
-    
+
     for animal in animais:
         # Criar várias pesagens para cada animal
         num_pesagens = random.randint(3, 8)
-        data_inicial = animal.data_nascimento + timedelta(days=180)  # Primeira pesagem aos 6 meses
-        
-        peso_inicial = random.randint(80, 120) if animal.sexo == 'M' else random.randint(70, 100)
-        
+        data_inicial = animal.data_nascimento + \
+            timedelta(days=180)  # Primeira pesagem aos 6 meses
+
+        peso_inicial = random.randint(
+            80, 120) if animal.sexo == 'M' else random.randint(70, 100)
+
         for i in range(num_pesagens):
-            data_pesagem = data_inicial + timedelta(days=i * 60)  # Pesagem a cada 2 meses
-            
+            data_pesagem = data_inicial + \
+                timedelta(days=i * 60)  # Pesagem a cada 2 meses
+
             if data_pesagem > date.today():
                 break
-                
+
             # Simular ganho de peso
             peso_atual = peso_inicial + (i * random.randint(15, 35))
-            
+
             # Criar manejo de pesagem
             manejo = Manejo.objects.create(
                 propriedade=animal.propriedade,
@@ -248,10 +278,10 @@ def criar_pesagens(animais):
                 data_manejo=data_pesagem,
                 observacoes=f'Pesagem de rotina - {animal.identificacao_unica}'
             )
-            
+
             # Adicionar animal ao manejo
             manejo.animais.add(animal)
-            
+
             # Criar registro de pesagem
             pesagem = Pesagem.objects.create(
                 animal=animal,
@@ -260,13 +290,15 @@ def criar_pesagens(animais):
                 data_pesagem=data_pesagem,
                 equipamento_usado='Balança eletrônica'
             )
-    
+
     print(f"✅ Pesagens criadas para {len(animais)} animais")
 
 # Criar vacinas
+
+
 def criar_vacinas():
     print("💉 Criando vacinas...")
-    
+
     vacinas_data = [
         {
             'nome': 'Vacina Febre Aftosa',
@@ -296,22 +328,24 @@ def criar_vacinas():
             'periodo_carencia_dias': 21
         }
     ]
-    
+
     vacinas_criadas = []
     for vacina_data in vacinas_data:
         vacina = Vacina.objects.create(**vacina_data)
         vacinas_criadas.append(vacina)
         print(f"✅ Vacina criada: {vacina.nome}")
-    
+
     return vacinas_criadas
 
 # Função principal
+
+
 def gerar_dados_teste():
     print("🚀 Iniciando geração de dados de teste...")
-    
+
     # Perguntar se deve limpar dados
     limpar_dados()
-    
+
     # Criar dados
     criar_usuarios()
     propriedades = criar_propriedades()
@@ -320,7 +354,7 @@ def gerar_dados_teste():
     animais = criar_animais(propriedades, lotes)
     criar_pesagens(animais)
     vacinas = criar_vacinas()
-    
+
     print("\n✅ Dados de teste gerados com sucesso!")
     print(f"📊 Resumo:")
     print(f"   - {len(propriedades)} propriedades")
@@ -329,6 +363,7 @@ def gerar_dados_teste():
     print(f"   - {len(animais)} animais")
     print(f"   - {Pesagem.objects.count()} pesagens")
     print(f"   - {len(vacinas)} vacinas")
+
 
 if __name__ == "__main__":
     gerar_dados_teste()

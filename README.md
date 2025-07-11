@@ -103,9 +103,71 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-5. **Execução**:
+5. **Dados de Teste (Opcional)**:
+```bash
+# Criar dados fictícios para teste
+python manage.py criar_dados_teste --usuarios 2
+
+# Ou forçar criação mesmo se já existirem dados
+python manage.py criar_dados_teste --force --usuarios 3 --animais 50
+```
+
+6. **Execução**:
 ```bash
 python manage.py runserver
+```
+
+## 🛠️ Comandos Úteis
+
+### Criar Dados de Teste
+
+O AgroNexus inclui um comando para criar dados fictícios que facilitam o desenvolvimento e teste:
+
+```bash
+# Criar dados básicos (3 proprietários, 80-200 animais por propriedade)
+python manage.py criar_dados_teste
+
+# Personalizar quantidade de usuários proprietários
+python manage.py criar_dados_teste --usuarios 2
+
+# Limitar quantidade de animais por propriedade
+python manage.py criar_dados_teste --animais 50
+
+# Forçar criação mesmo se já existirem dados
+python manage.py criar_dados_teste --force
+
+# Exemplo completo com todas as opções
+python manage.py criar_dados_teste --force --usuarios 3 --animais 100
+```
+
+**Dados criados pelo comando:**
+- Super usuário admin (admin / admin123)
+- Usuários por perfil: Proprietários, Gerentes, Funcionários, Veterinários
+- Propriedades rurais com áreas e piquetes
+- Rebanho com animais de diferentes categorias
+- Lotes organizados por critérios
+- Histórico de pesagens e manejos
+- Vacinações e controle sanitário
+- Lançamentos financeiros básicos
+
+**Credenciais de teste:**
+- Admin: `admin / admin123`
+- Proprietários: `proprietario1, proprietario2, proprietario3 / 123456`
+- Gerentes: `gerente1, gerente2 / 123456`
+- Funcionários: `funcionario1 a funcionario5 / 123456`
+- Veterinários: `veterinario1, veterinario2 / 123456`
+
+### Outros Comandos
+
+```bash
+# Configurar grupos de usuários
+python manage.py setup_groups
+
+# Limpar cache
+python manage.py clear_cache
+
+# Executar tarefas pendentes
+python manage.py process_tasks
 ```
 
 ## 🔧 Configuração Avançada
@@ -347,4 +409,4 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 
 ---
 
-**AgroNexus - Sistema Fertili** - Transformando a gestão pecuária através da tecnologia! 🚀
+**AgroNexus - Sistema ** - Transformando a gestão pecuária através da tecnologia! 🚀

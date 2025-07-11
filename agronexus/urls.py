@@ -3,35 +3,21 @@ AgroNexus - Sistema Fertili
 URLs da API v1
 """
 
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .api.v1.views import (
-    UsuarioViewSet,
-    PropriedadeViewSet,
-    AreaViewSet,
-    AnimalViewSet,
-    LoteViewSet,
-    ManejoViewSet,
-    PesagemViewSet,
-    EstacaoMontaViewSet,
-    ProtocoloIATFViewSet,
-    InseminacaoViewSet,
-    DiagnosticoGestacaoViewSet,
-    PartoViewSet,
-    VacinaViewSet,
-    MedicamentoViewSet,
-    VacinacaoViewSet,
-    AdministracaoMedicamentoViewSet,
-    CalendarioSanitarioViewSet,
-    ContaFinanceiraViewSet,
-    CategoriaFinanceiraViewSet,
-    LancamentoFinanceiroViewSet,
-    RelatorioPersonalizadoViewSet,
-    ConfiguracaoSistemaViewSet,
-    HistoricoLoteAnimalViewSet,
-    HistoricoOcupacaoAreaViewSet,
-)
+from .api.v1.views import (AdministracaoMedicamentoViewSet, AnimalViewSet,
+                           AreaViewSet, CalendarioSanitarioViewSet,
+                           CategoriaFinanceiraViewSet,
+                           ConfiguracaoSistemaViewSet, ContaFinanceiraViewSet,
+                           DiagnosticoGestacaoViewSet, EstacaoMontaViewSet,
+                           HistoricoLoteAnimalViewSet,
+                           HistoricoOcupacaoAreaViewSet, InseminacaoViewSet,
+                           LancamentoFinanceiroViewSet, LoteViewSet,
+                           ManejoViewSet, MedicamentoViewSet, PartoViewSet,
+                           PesagemViewSet, PropriedadeViewSet,
+                           ProtocoloIATFViewSet, RelatorioPersonalizadoViewSet,
+                           UsuarioViewSet, VacinacaoViewSet, VacinaViewSet)
 
 # Configuração do router
 router = DefaultRouter()
@@ -64,5 +50,5 @@ router.register(r'historico-ocupacao-area', HistoricoOcupacaoAreaViewSet)
 
 urlpatterns = [
     # API v1 endpoints
-    path('v1/', include(router.urls)),
+    path('', include(router.urls)),
 ]

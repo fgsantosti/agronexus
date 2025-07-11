@@ -1,0 +1,217 @@
+{
+	"info": {
+		"name": "AgroNexus - Sistema Fertili",
+		"description": "Collection completa para testar a API do AgroNexus",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Autenticação",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "refresh", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Usuários",
+			"item": [
+				{
+					"name": "Listar Usuários",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/usuarios/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "usuarios", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Usuário",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"funcionario1\",\n    \"email\": \"funcionario1@email.com\",\n    \"password\": \"senha123456\",\n    \"password_confirm\": \"senha123456\",\n    \"first_name\": \"João\",\n    \"last_name\": \"Silva\",\n    \"perfil\": \"funcionario\",\n    \"telefone\": \"(11) 99999-9999\",\n    \"cpf\": \"123.456.789-00\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/usuarios/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "usuarios", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Propriedades",
+			"item": [
+				{
+					"name": "Listar Propriedades",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/propriedades/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "propriedades", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Propriedade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nome\": \"Fazenda São João\",\n    \"localizacao\": \"Rua das Fazendas, 123 - Zona Rural, Cidade/UF\",\n    \"area_total_ha\": 500.50,\n    \"coordenadas_gps\": {\n        \"latitude\": -23.5505,\n        \"longitude\": -46.6333\n    },\n    \"inscricao_estadual\": \"123456789\",\n    \"cnpj_cpf\": \"12.345.678/0001-90\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/propriedades/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "propriedades", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Animais",
+			"item": [
+				{
+					"name": "Listar Animais",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/animais/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "animais", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Animal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"brinco\": \"001\",\n    \"nome\": \"Vaca Mimosa\",\n    \"sexo\": \"F\",\n    \"raca\": \"Nelore\",\n    \"categoria\": \"vaca\",\n    \"data_nascimento\": \"2020-05-15\",\n    \"peso_nascimento\": 35.0,\n    \"propriedade\": \"{{propriedade_id}}\",\n    \"pai\": null,\n    \"mae\": null,\n    \"origem\": \"nascimento\",\n    \"valor_aquisicao\": 2500.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/animais/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "animais", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

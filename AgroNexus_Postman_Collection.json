@@ -14,6 +14,16 @@
 			"key": "access_token",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "propriedade_id",
+			"value": "1",
+			"type": "string"
 		}
 	],
 	"item": [
@@ -22,6 +32,25 @@
 			"item": [
 				{
 					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Salvar tokens nas variáveis da collection",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.access);",
+									"    pm.collectionVariables.set('refresh_token', response.refresh);",
+									"    console.log('Tokens salvos com sucesso!');",
+									"} else {",
+									"    console.log('Erro no login:', pm.response.text());",
+									"}"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -32,7 +61,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123456\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/auth/login/",
@@ -44,6 +73,24 @@
 				},
 				{
 					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Salvar novo access token",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.access);",
+									"    console.log('Access token renovado com sucesso!');",
+									"} else {",
+									"    console.log('Erro no refresh:', pm.response.text());",
+									"}"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -103,7 +150,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"funcionario1\",\n    \"email\": \"funcionario1@email.com\",\n    \"password\": \"senha123456\",\n    \"password_confirm\": \"senha123456\",\n    \"first_name\": \"João\",\n    \"last_name\": \"Silva\",\n    \"perfil\": \"funcionario\",\n    \"telefone\": \"(11) 99999-9999\",\n    \"cpf\": \"123.456.789-00\"\n}"
+							"raw": "{\n    \"username\": \"funcionario1\",\n    \"email\": \"funcionario1@email.com\",\n    \"password\": \"senha123456\",\n    \"password_confirm\": \"senha123456\",\n    \"first_name\": \"João\",\n    \"last_name\": \"Silva\",\n    \"grupo\": \"Funcionário\",\n    \"telefone\": \"(11) 99999-9999\",\n    \"cpf\": \"123.456.789-00\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/usuarios/",

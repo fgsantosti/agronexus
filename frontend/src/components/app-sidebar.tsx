@@ -13,6 +13,7 @@ import {
   Sprout,
   Stethoscope,
   TrendingUp,
+  Baby,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -117,7 +118,7 @@ const data = {
     {
       title: "Reprodução",
       url: "/reproducao",
-      icon: Calendar,
+      icon: Baby,
       items: [
         {
           title: "Coberturas",
@@ -153,6 +154,25 @@ const data = {
         {
           title: "Relatórios",
           url: "/financeiro/relatorios",
+        },
+      ],
+    },
+    {
+      title: "Calendário",
+      url: "/calendario",
+      icon: Calendar,
+      items: [
+        {
+          title: "Eventos",
+          url: "/calendario",
+        },
+        {
+          title: "Lembretes",
+          url: "/calendario/lembretes",
+        },
+        {
+          title: "Planejamento",
+          url: "/calendario/planejamento",
         },
       ],
     },

@@ -8,8 +8,8 @@ import { differenceInMinutes, format, getMinutes, isPast } from "date-fns"
 import {
   getBorderRadiusClasses,
   getEventColorClasses,
-} from "@/components/event-calendar/utils"
-import type { CalendarEvent } from "@/components/event-calendar/types"
+} from "./utils"
+import type { CalendarEvent } from "./types"
 import { cn } from "@/lib/utils"
 
 // Using date-fns format with custom formatting:

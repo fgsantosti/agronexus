@@ -16,10 +16,10 @@ import {
   Baby,
 } from "lucide-react"
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { NavMain } from "@/components/navigation/nav-main"
+import { NavProjects } from "@/components/navigation/nav-projects"
+import { NavUser } from "@/components/navigation/nav-user"
+import { TeamSwitcher } from "@/components/navigation/team-switcher"
 import {
   Sidebar,
   SidebarContent,

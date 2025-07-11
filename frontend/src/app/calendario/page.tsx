@@ -6,7 +6,7 @@ import { addDays, setHours, setMinutes, subDays } from "date-fns"
 import {
   EventCalendar,
   type CalendarEvent,
-} from "@/components/event-calendar/event-calendar"
+} from "@/components/event-calendar"
 
 // Eventos específicos para o contexto agrícola
 const agronexusEvents: CalendarEvent[] = [

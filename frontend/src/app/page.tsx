@@ -1,5 +1,5 @@
-import DashboardWithSidebar from '@/components/dashboard-with-sidebar'
+import DashboardPage from './dashboard-layout'
 
 export default function Home() {
-  return <DashboardWithSidebar />
+  return <DashboardPage />
 }

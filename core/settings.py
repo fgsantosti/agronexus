@@ -1,5 +1,5 @@
 """
-Django settings for AgroNexus - Sistema Fertili
+Django settings for AgroNexus - Sistema 
 Sistema de gestão pecuária completo com módulos integrados
 """
 
@@ -184,7 +184,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # API Documentation
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'AgroNexus - Sistema Fertili API',
+    'TITLE': 'AgroNexus - Sistema  API',
     'DESCRIPTION': 'Sistema completo de gestão pecuária com APIs REST',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,

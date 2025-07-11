@@ -1,6 +1,6 @@
 
 """
-Sistema Fertili - Models Django
+Sistema  - Models Django
 Sistema de gestão pecuária completo com módulos integrados
 Data: 2025-07-09
 """

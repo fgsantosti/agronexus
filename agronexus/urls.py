@@ -1,5 +1,5 @@
 """
-AgroNexus - Sistema Fertili
+AgroNexus - Sistema 
 URLs da API v1
 """
 

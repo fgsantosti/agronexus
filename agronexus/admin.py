@@ -1,10 +1,11 @@
 """
-AgroNexus - Sistema Fertili
+AgroNexus - Sistema 
 Configuração do Django Admin
 """
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -16,6 +17,60 @@ from .models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
                      Inseminacao, LancamentoFinanceiro, Lote, Manejo,
                      Medicamento, Parto, Pesagem, Propriedade, ProtocoloIATF,
                      RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
+
+
+def get_propriedades_usuario(user):
+    """
+    Função auxiliar para filtrar propriedades baseada no usuário logado
+    """
+    # Superusuário vê tudo
+    if user.is_superuser:
+        return Propriedade.objects.all()
+
+    # Proprietário vê apenas suas propriedades
+    if user.groups.filter(name='Proprietário').exists():
+        return Propriedade.objects.filter(proprietario=user)
+
+    # Outros grupos não veem propriedades
+    return Propriedade.objects.none()
+
+
+def filter_queryset_by_propriedade(qs, user, propriedade_field='propriedade'):
+    """
+    Função auxiliar para filtrar queryset baseado nas propriedades do usuário
+
+    Args:
+        qs: QuerySet a ser filtrado
+        user: Usuário logado
+        propriedade_field: Campo que referencia a propriedade (padrão: 'propriedade')
+
+    Returns:
+        QuerySet filtrado
+    """
+    # Superusuário vê tudo
+    if user.is_superuser:
+        return qs
+
+    # Proprietário vê apenas dados de suas propriedades
+    if user.groups.filter(name='Proprietário').exists():
+        filter_kwargs = {f'{propriedade_field}__proprietario': user}
+        return qs.filter(**filter_kwargs)
+
+    # Outros grupos não veem dados no admin
+    return qs.none()
+
+
+def setup_propriedade_formfield(db_field, request, kwargs):
+    """
+    Função auxiliar para configurar o campo propriedade nos formulários
+    """
+    if db_field.name == "propriedade":
+        if not request.user.is_superuser:
+            if request.user.groups.filter(name='Proprietário').exists():
+                kwargs["queryset"] = Propriedade.objects.filter(
+                    proprietario=request.user
+                )
+    return kwargs
 
 
 @admin.register(Usuario)
@@ -34,6 +89,23 @@ class UsuarioAdmin(UserAdmin):
             return ', '.join([grupo.name for grupo in grupos])
         return 'Sem perfil'
     get_perfil_display.short_description = 'Perfil'
+
+    def get_queryset(self, request):
+        """
+        Filtra usuários baseado no grupo do usuário logado
+        """
+        qs = super().get_queryset(request)
+
+        # Superusuário vê tudo
+        if request.user.is_superuser:
+            return qs
+
+        # Proprietário vê apenas a si mesmo
+        if request.user.groups.filter(name='Proprietário').exists():
+            return qs.filter(pk=request.user.pk)
+
+        # Outros grupos veem apenas a si mesmos
+        return qs.filter(pk=request.user.pk)
 
     fieldsets = UserAdmin.fieldsets + (
         ('Dados Adicionais', {
@@ -58,6 +130,21 @@ class PropriedadeAdmin(admin.ModelAdmin):
                      'inscricao_estadual', 'cnpj_cpf']
     ordering = ['nome']
     readonly_fields = ['id', 'data_criacao']
+
+    def get_queryset(self, request):
+        """
+        Filtra propriedades baseado no grupo do usuário logado
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user, 'proprietario')
+
+    def save_model(self, request, obj, form, change):
+        """
+        Ao criar uma propriedade, define o usuário atual como proprietário
+        """
+        if not change:  # Apenas na criação
+            obj.proprietario = request.user
+        super().save_model(request, obj, form, change)
 
     fieldsets = [
         ('Informações Básicas', {
@@ -93,6 +180,20 @@ class AreaAdmin(admin.ModelAdmin):
     ordering = ['propriedade', 'nome']
     readonly_fields = ['id', 'data_criacao']
 
+    def get_queryset(self, request):
+        """
+        Filtra áreas baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra as propriedades disponíveis no formulário
+        """
+        kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     def get_lote_atual(self, obj):
         lote = obj.get_lote_atual()
         if lote:
@@ -113,6 +214,20 @@ class AnimalAdmin(admin.ModelAdmin):
     ordering = ['propriedade', 'identificacao_unica']
     readonly_fields = ['id', 'data_criacao',
                        'data_atualizacao', 'get_idade_dias', 'get_peso_atual']
+
+    def get_queryset(self, request):
+        """
+        Filtra animais baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra as propriedades disponíveis no formulário
+        """
+        kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     fieldsets = [
         ('Identificação', {
@@ -164,6 +279,20 @@ class LoteAdmin(admin.ModelAdmin):
     readonly_fields = ['id', 'data_criacao',
                        'get_total_animais', 'get_total_ua']
 
+    def get_queryset(self, request):
+        """
+        Filtra lotes baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra as propriedades disponíveis no formulário
+        """
+        kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     def get_total_animais(self, obj):
         return obj.get_total_animais()
     get_total_animais.short_description = 'Total Animais'
@@ -183,6 +312,20 @@ class ManejoAdmin(admin.ModelAdmin):
     ordering = ['-data_manejo']
     readonly_fields = ['id', 'data_criacao', 'custo_total']
 
+    def get_queryset(self, request):
+        """
+        Filtra manejos baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra as propriedades disponíveis no formulário
+        """
+        kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     def get_total_animais(self, obj):
         return obj.get_total_animais()
     get_total_animais.short_description = 'Total Animais'
@@ -196,6 +339,15 @@ class PesagemAdmin(admin.ModelAdmin):
     search_fields = ['animal__identificacao_unica', 'observacoes']
     ordering = ['-data_pesagem']
     readonly_fields = ['id', 'get_gmd_anterior']
+
+    def get_queryset(self, request):
+        """
+        Filtra pesagens baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(
+            qs, request.user, 'animal__propriedade'
+        )
 
     def get_gmd_anterior(self, obj):
         gmd = obj.get_gmd_anterior()
@@ -351,6 +503,20 @@ class ContaFinanceiraAdmin(admin.ModelAdmin):
     ordering = ['propriedade', 'nome']
     readonly_fields = ['id', 'data_criacao', 'get_saldo_atual']
 
+    def get_queryset(self, request):
+        """
+        Filtra contas financeiras baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra as propriedades disponíveis no formulário
+        """
+        kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     def get_saldo_atual(self, obj):
         return f"R$ {obj.get_saldo_atual():,.2f}"
     get_saldo_atual.short_description = 'Saldo Atual'
@@ -376,6 +542,20 @@ class LancamentoFinanceiroAdmin(admin.ModelAdmin):
     ordering = ['-data_lancamento']
     readonly_fields = ['id', 'data_criacao']
 
+    def get_queryset(self, request):
+        """
+        Filtra lançamentos financeiros baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra as propriedades disponíveis no formulário
+        """
+        kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(RelatorioPersonalizado)
 class RelatorioPersonalizadoAdmin(admin.ModelAdmin):
@@ -387,6 +567,20 @@ class RelatorioPersonalizadoAdmin(admin.ModelAdmin):
     ordering = ['-data_criacao']
     readonly_fields = ['id', 'data_criacao', 'data_atualizacao']
 
+    def get_queryset(self, request):
+        """
+        Filtra relatórios baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra as propriedades disponíveis no formulário
+        """
+        kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(ConfiguracaoSistema)
 class ConfiguracaoSistemaAdmin(admin.ModelAdmin):
@@ -397,6 +591,20 @@ class ConfiguracaoSistemaAdmin(admin.ModelAdmin):
     search_fields = ['propriedade__nome']
     ordering = ['propriedade']
     readonly_fields = ['id', 'data_criacao', 'data_atualizacao']
+
+    def get_queryset(self, request):
+        """
+        Filtra configurações baseado nas propriedades do usuário
+        """
+        qs = super().get_queryset(request)
+        return filter_queryset_by_propriedade(qs, request.user)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra as propriedades disponíveis no formulário
+        """
+        kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 # Inline admins para relacionamentos
@@ -425,6 +633,6 @@ PropriedadeAdmin.inlines = [AreaInline, LoteInline]
 LoteAdmin.inlines = [AnimalInline]
 
 # Customização do admin site
-admin.site.site_header = 'AgroNexus - Sistema Fertili'
+admin.site.site_header = 'AgroNexus - Sistema '
 admin.site.site_title = 'AgroNexus Admin'
 admin.site.index_title = 'Administração do Sistema'

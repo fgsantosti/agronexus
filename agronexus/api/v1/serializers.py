@@ -1,5 +1,5 @@
 """
-AgroNexus - Sistema Fertili
+AgroNexus - Sistema 
 Serializers para API REST
 """
 
@@ -117,6 +117,7 @@ class UsuarioResumoSerializer(serializers.ModelSerializer):
     """Serializer resumido para usuários"""
     nome_completo = serializers.CharField(
         source='get_full_name', read_only=True)
+    perfil = serializers.CharField(source='perfil_principal', read_only=True)
 
     class Meta:
         model = Usuario

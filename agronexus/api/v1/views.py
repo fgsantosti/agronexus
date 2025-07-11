@@ -1,61 +1,71 @@
 """
-AgroNexus - Sistema Fertili
+AgroNexus - Sistema 
 ViewSets para API REST
 """
 
-from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.filters import SearchFilter, OrderingFilter
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Count, Sum, Avg, Q, F
-from django.utils import timezone
 from datetime import timedelta
-from drf_spectacular.utils import extend_schema, OpenApiParameter
 
-from ...models import (
-    Usuario, Propriedade, Area, Animal, Lote, HistoricoLoteAnimal, HistoricoOcupacaoArea,
-    Manejo, AnimalManejo, Pesagem, EstacaoMonta, ProtocoloIATF, Inseminacao, DiagnosticoGestacao,
-    Parto, Vacina, Medicamento, Vacinacao, AdministracaoMedicamento, CalendarioSanitario,
-    ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, RelatorioPersonalizado,
-    ConfiguracaoSistema
-)
+from django.db.models import Avg, Count, F, Q, Sum
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.response import Response
+
+from ...models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
+                       CalendarioSanitario, CategoriaFinanceira,
+                       ConfiguracaoSistema, ContaFinanceira,
+                       DiagnosticoGestacao, EstacaoMonta, HistoricoLoteAnimal,
+                       HistoricoOcupacaoArea, Inseminacao,
+                       LancamentoFinanceiro, Lote, Manejo, Medicamento, Parto,
+                       Pesagem, Propriedade, ProtocoloIATF,
+                       RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
 from ...permissions.base import IsOwnerOrReadOnly, PropriedadeOwnerPermission
-from ...utils.filters import (
-    PropriedadeFilter, AreaFilter, AnimalFilter, LoteFilter, ManejoFilter,
-    PesagemFilter, EstacaoMontaFilter, InseminacaoFilter, DiagnosticoGestacaoFilter,
-    PartoFilter, VacinacaoFilter, CalendarioSanitarioFilter, LancamentoFinanceiroFilter
-)
-from .serializers import (
-    UsuarioSerializer, PropriedadeSerializer, AreaSerializer, AnimalSerializer,
-    LoteSerializer, ManejoSerializer, PesagemSerializer, EstacaoMontaSerializer,
-    ProtocoloIATFSerializer, InseminacaoSerializer, DiagnosticoGestacaoSerializer,
-    PartoSerializer, VacinaSerializer, MedicamentoSerializer, VacinacaoSerializer,
-    AdministracaoMedicamentoSerializer, CalendarioSanitarioSerializer,
-    ContaFinanceiraSerializer, CategoriaFinanceiraSerializer, LancamentoFinanceiroSerializer,
-    RelatorioPersonalizadoSerializer, ConfiguracaoSistemaSerializer,
-    HistoricoLoteAnimalSerializer, HistoricoOcupacaoAreaSerializer
-)
+from ...utils.filters import (AnimalFilter, AreaFilter,
+                              CalendarioSanitarioFilter,
+                              DiagnosticoGestacaoFilter, EstacaoMontaFilter,
+                              InseminacaoFilter, LancamentoFinanceiroFilter,
+                              LoteFilter, ManejoFilter, PartoFilter,
+                              PesagemFilter, PropriedadeFilter,
+                              VacinacaoFilter)
+from .serializers import (AdministracaoMedicamentoSerializer, AnimalSerializer,
+                          AreaSerializer, CalendarioSanitarioSerializer,
+                          CategoriaFinanceiraSerializer,
+                          ConfiguracaoSistemaSerializer,
+                          ContaFinanceiraSerializer,
+                          DiagnosticoGestacaoSerializer,
+                          EstacaoMontaSerializer,
+                          HistoricoLoteAnimalSerializer,
+                          HistoricoOcupacaoAreaSerializer,
+                          InseminacaoSerializer,
+                          LancamentoFinanceiroSerializer, LoteSerializer,
+                          ManejoSerializer, MedicamentoSerializer,
+                          PartoSerializer, PesagemSerializer,
+                          PropriedadeSerializer, ProtocoloIATFSerializer,
+                          RelatorioPersonalizadoSerializer, UsuarioSerializer,
+                          VacinacaoSerializer, VacinaSerializer)
 
 
 class BaseViewSet(viewsets.ModelViewSet):
     """ViewSet base com funcionalidades comuns"""
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     def get_queryset(self):
         """Filtra registros por propriedade quando aplicável"""
         queryset = super().get_queryset()
-        
+
         # Se o modelo tem propriedade, filtra por propriedades do usuário
         if hasattr(self.queryset.model, 'propriedade'):
             propriedades_usuario = Propriedade.objects.filter(
                 proprietario=self.request.user
             )
             queryset = queryset.filter(propriedade__in=propriedades_usuario)
-        
+
         return queryset
-    
+
     def perform_create(self, serializer):
         """Associa o usuário atual ao criar registros"""
         # Se o modelo tem campo usuario, associa o usuário atual
@@ -78,20 +88,21 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     search_fields = ['username', 'first_name', 'last_name', 'email']
     ordering_fields = ['username', 'first_name', 'last_name', 'date_joined']
     ordering = ['-date_joined']
-    
+
     def get_queryset(self):
         """Usuários podem ver apenas dados da sua propriedade"""
         if self.request.user.is_superuser:
             return self.queryset
-        
+
         # Pega as propriedades do usuário atual
-        propriedades = Propriedade.objects.filter(proprietario=self.request.user)
-        
+        propriedades = Propriedade.objects.filter(
+            proprietario=self.request.user)
+
         # Retorna usuários das suas propriedades
         return self.queryset.filter(
             Q(propriedades__in=propriedades) | Q(id=self.request.user.id)
         ).distinct()
-    
+
     @action(detail=False, methods=['get'])
     def me(self, request):
         """Retorna dados do usuário atual"""
@@ -108,7 +119,7 @@ class PropriedadeViewSet(BaseViewSet):
     search_fields = ['nome', 'localizacao', 'inscricao_estadual']
     ordering_fields = ['nome', 'area_total_ha', 'data_criacao']
     ordering = ['nome']
-    
+
     def get_queryset(self):
         """Usuários veem apenas suas propriedades"""
         return self.queryset.filter(proprietario=self.request.user).annotate(
@@ -117,43 +128,43 @@ class PropriedadeViewSet(BaseViewSet):
             total_lotes=Count('lotes', filter=Q(lotes__ativo=True)),
             total_areas=Count('areas')
         )
-    
+
     def perform_create(self, serializer):
         """Associa o usuário atual como proprietário"""
         serializer.save(proprietario=self.request.user)
-    
+
     @action(detail=True, methods=['get'])
     def dashboard(self, request, pk=None):
         """Dashboard com estatísticas da propriedade"""
         propriedade = self.get_object()
-        
+
         # Estatísticas gerais
         total_animais = propriedade.animais.filter(status='ativo').count()
         total_lotes = propriedade.lotes.filter(ativo=True).count()
         total_areas = propriedade.areas.count()
-        
+
         # Estatísticas por categoria
         por_categoria = propriedade.animais.filter(status='ativo').values(
             'categoria'
         ).annotate(total=Count('id'))
-        
+
         # Estatísticas por sexo
         por_sexo = propriedade.animais.filter(status='ativo').values(
             'sexo'
         ).annotate(total=Count('id'))
-        
+
         # Estatísticas financeiras (último mês)
         data_limite = timezone.now().date() - timedelta(days=30)
         receitas = propriedade.lancamentos_financeiros.filter(
             tipo='entrada',
             data_lancamento__gte=data_limite
         ).aggregate(total=Sum('valor'))['total'] or 0
-        
+
         despesas = propriedade.lancamentos_financeiros.filter(
             tipo='saida',
             data_lancamento__gte=data_limite
         ).aggregate(total=Sum('valor'))['total'] or 0
-        
+
         return Response({
             'estatisticas_gerais': {
                 'total_animais': total_animais,
@@ -182,27 +193,28 @@ class AreaViewSet(BaseViewSet):
     """ViewSet para áreas"""
     queryset = Area.objects.all()
     serializer_class = AreaSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     filterset_class = AreaFilter
     search_fields = ['nome', 'tipo_forragem']
     ordering_fields = ['nome', 'tipo', 'tamanho_ha', 'status']
     ordering = ['nome']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related('propriedade')
-    
+
     @action(detail=True, methods=['post'])
     def ocupar(self, request, pk=None):
         """Ocupa uma área com um lote"""
         area = self.get_object()
         lote_id = request.data.get('lote_id')
-        
+
         if not lote_id:
             return Response(
                 {'error': 'ID do lote é obrigatório'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             lote = Lote.objects.get(id=lote_id, propriedade=area.propriedade)
         except Lote.DoesNotExist:
@@ -210,67 +222,69 @@ class AreaViewSet(BaseViewSet):
                 {'error': 'Lote não encontrado'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         # Verifica se a área já está ocupada
         if area.get_lote_atual():
             return Response(
                 {'error': 'Área já está ocupada'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Libera a área atual do lote
         if lote.area_atual:
             lote.area_atual.status = 'disponivel'
             lote.area_atual.save()
-        
+
         # Ocupa a nova área
         lote.area_atual = area
         lote.save()
-        
+
         area.status = 'em_uso'
         area.save()
-        
+
         # Registra no histórico
         HistoricoOcupacaoArea.objects.create(
             lote=lote,
             area=area,
             data_entrada=timezone.now().date(),
-            motivo_movimentacao=request.data.get('motivo', 'Movimentação via API'),
+            motivo_movimentacao=request.data.get(
+                'motivo', 'Movimentação via API'),
             usuario=request.user
         )
-        
+
         return Response({'message': 'Área ocupada com sucesso'})
-    
+
     @action(detail=True, methods=['post'])
     def liberar(self, request, pk=None):
         """Libera uma área"""
         area = self.get_object()
         lote_atual = area.get_lote_atual()
-        
+
         if not lote_atual:
             return Response(
                 {'error': 'Área não está ocupada'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Finaliza o histórico atual
         historico = HistoricoOcupacaoArea.objects.filter(
             area=area,
             data_saida__isnull=True
         ).first()
-        
+
         if historico:
             historico.data_saida = timezone.now().date()
-            historico.motivo_movimentacao = request.data.get('motivo', 'Liberação via API')
+            historico.motivo_movimentacao = request.data.get(
+                'motivo', 'Liberação via API')
             historico.save()
-        
+
         # Libera a área
         lote_atual.area_atual = None
         lote_atual.save()
-        
+
         area.status = 'disponivel'
         area.save()
-        
+
         return Response({'message': 'Área liberada com sucesso'})
 
 
@@ -282,33 +296,35 @@ class AnimalViewSet(BaseViewSet):
     """ViewSet para animais"""
     queryset = Animal.objects.all()
     serializer_class = AnimalSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     filterset_class = AnimalFilter
     search_fields = ['identificacao_unica', 'nome_registro', 'raca']
-    ordering_fields = ['identificacao_unica', 'data_nascimento', 'categoria', 'data_criacao']
+    ordering_fields = ['identificacao_unica',
+                       'data_nascimento', 'categoria', 'data_criacao']
     ordering = ['identificacao_unica']
-    
+
     def get_queryset(self):
         queryset = super().get_queryset().select_related(
             'propriedade', 'lote_atual', 'pai', 'mae'
         )
-        
+
         # Adiciona campos calculados
         for animal in queryset:
             animal.idade_dias = animal.get_idade_dias()
             animal.idade_meses = animal.get_idade_meses()
             animal.peso_atual = animal.get_peso_atual()
             animal.ua_value = animal.get_ua_value()
-        
+
         return queryset
-    
+
     @action(detail=True, methods=['get'])
     def historico_completo(self, request, pk=None):
         """Retorna histórico completo do animal"""
         animal = self.get_object()
         historico = animal.get_historico_completo()
         return Response(historico)
-    
+
     @action(detail=True, methods=['get'])
     def evolucao_peso(self, request, pk=None):
         """Retorna evolução do peso do animal"""
@@ -317,27 +333,28 @@ class AnimalViewSet(BaseViewSet):
             'data_pesagem', 'peso_kg'
         )
         return Response(list(pesagens))
-    
+
     @action(detail=True, methods=['post'])
     def trocar_lote(self, request, pk=None):
         """Troca o animal de lote"""
         animal = self.get_object()
         lote_id = request.data.get('lote_id')
-        
+
         if not lote_id:
             return Response(
                 {'error': 'ID do lote é obrigatório'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
-            novo_lote = Lote.objects.get(id=lote_id, propriedade=animal.propriedade)
+            novo_lote = Lote.objects.get(
+                id=lote_id, propriedade=animal.propriedade)
         except Lote.DoesNotExist:
             return Response(
                 {'error': 'Lote não encontrado'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         # Registra saída do lote atual
         if animal.lote_atual:
             historico_atual = HistoricoLoteAnimal.objects.filter(
@@ -345,12 +362,13 @@ class AnimalViewSet(BaseViewSet):
                 lote=animal.lote_atual,
                 data_saida__isnull=True
             ).first()
-            
+
             if historico_atual:
                 historico_atual.data_saida = timezone.now().date()
-                historico_atual.motivo_movimentacao = request.data.get('motivo', 'Troca via API')
+                historico_atual.motivo_movimentacao = request.data.get(
+                    'motivo', 'Troca via API')
                 historico_atual.save()
-        
+
         # Registra entrada no novo lote
         HistoricoLoteAnimal.objects.create(
             animal=animal,
@@ -359,10 +377,10 @@ class AnimalViewSet(BaseViewSet):
             motivo_movimentacao=request.data.get('motivo', 'Troca via API'),
             usuario=request.user
         )
-        
+
         animal.lote_atual = novo_lote
         animal.save()
-        
+
         return Response({'message': 'Animal movido com sucesso'})
 
 
@@ -370,61 +388,62 @@ class LoteViewSet(BaseViewSet):
     """ViewSet para lotes"""
     queryset = Lote.objects.all()
     serializer_class = LoteSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     filterset_class = LoteFilter
     search_fields = ['nome', 'descricao', 'criterio_agrupamento']
     ordering_fields = ['nome', 'data_criacao']
     ordering = ['nome']
-    
+
     def get_queryset(self):
         queryset = super().get_queryset().select_related(
             'propriedade', 'area_atual'
         )
-        
+
         # Adiciona campos calculados
         for lote in queryset:
             lote.total_animais = lote.get_total_animais()
             lote.total_ua = lote.get_total_ua()
             lote.peso_medio = lote.get_peso_medio()
             lote.gmd_medio = lote.get_gmd_medio()
-        
+
         return queryset
-    
+
     @action(detail=True, methods=['get'])
     def animais(self, request, pk=None):
         """Lista animais do lote"""
         lote = self.get_object()
         animais = lote.animais.filter(status='ativo')
         page = self.paginate_queryset(animais)
-        
+
         if page is not None:
             serializer = AnimalSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        
+
         serializer = AnimalSerializer(animais, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=True, methods=['get'])
     def estatisticas(self, request, pk=None):
         """Estatísticas do lote"""
         lote = self.get_object()
-        
+
         # Estatísticas básicas
         total_animais = lote.get_total_animais()
         total_ua = lote.get_total_ua()
         peso_medio = lote.get_peso_medio()
         gmd_medio = lote.get_gmd_medio()
-        
+
         # Distribuição por categoria
         por_categoria = lote.animais.filter(status='ativo').values(
             'categoria'
         ).annotate(total=Count('id'))
-        
+
         # Distribuição por sexo
         por_sexo = lote.animais.filter(status='ativo').values(
             'sexo'
         ).annotate(total=Count('id'))
-        
+
         return Response({
             'basicas': {
                 'total_animais': total_animais,
@@ -447,30 +466,31 @@ class ManejoViewSet(BaseViewSet):
     """ViewSet para manejos"""
     queryset = Manejo.objects.all()
     serializer_class = ManejoSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     filterset_class = ManejoFilter
     search_fields = ['observacoes']
     ordering_fields = ['data_manejo', 'tipo', 'custo_total']
     ordering = ['-data_manejo']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'propriedade', 'lote', 'usuario'
         ).prefetch_related('animais')
-    
+
     @action(detail=False, methods=['get'])
     def relatorio_custos(self, request):
         """Relatório de custos por período"""
         data_inicio = request.query_params.get('data_inicio')
         data_fim = request.query_params.get('data_fim')
-        
+
         queryset = self.get_queryset()
-        
+
         if data_inicio:
             queryset = queryset.filter(data_manejo__gte=data_inicio)
         if data_fim:
             queryset = queryset.filter(data_manejo__lte=data_fim)
-        
+
         # Agrupa por tipo de manejo
         custos_por_tipo = queryset.values('tipo').annotate(
             total_material=Sum('custo_material'),
@@ -478,7 +498,7 @@ class ManejoViewSet(BaseViewSet):
             total_geral=Sum('custo_total'),
             quantidade=Count('id')
         )
-        
+
         return Response(list(custos_por_tipo))
 
 
@@ -491,17 +511,17 @@ class PesagemViewSet(BaseViewSet):
     search_fields = ['equipamento_usado', 'observacoes']
     ordering_fields = ['data_pesagem', 'peso_kg']
     ordering = ['-data_pesagem']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'animal', 'manejo'
         ).filter(animal__propriedade__proprietario=self.request.user)
-    
+
     @action(detail=False, methods=['get'])
     def evolucao_rebanho(self, request):
         """Evolução do peso médio do rebanho"""
         queryset = self.get_queryset()
-        
+
         # Agrupa por mês
         evolucao = queryset.extra(
             select={'mes': "DATE_FORMAT(data_pesagem, '%%Y-%%m')"}
@@ -509,7 +529,7 @@ class PesagemViewSet(BaseViewSet):
             peso_medio=Avg('peso_kg'),
             total_pesagens=Count('id')
         ).order_by('mes')
-        
+
         return Response(list(evolucao))
 
 
@@ -521,36 +541,40 @@ class EstacaoMontaViewSet(BaseViewSet):
     """ViewSet para estações de monta"""
     queryset = EstacaoMonta.objects.all()
     serializer_class = EstacaoMontaSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     filterset_class = EstacaoMontaFilter
     search_fields = ['nome', 'observacoes']
     ordering_fields = ['nome', 'data_inicio', 'data_fim']
     ordering = ['-data_inicio']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'propriedade'
         ).prefetch_related('lotes_participantes')
-    
+
     @action(detail=True, methods=['get'])
     def relatorio_reproducao(self, request, pk=None):
         """Relatório de reprodução da estação"""
         estacao = self.get_object()
-        
+
         # Estatísticas gerais
         total_femeas = estacao.get_total_femeas()
         taxa_prenhez = estacao.get_taxa_prenhez()
-        
+
         # Inseminações realizadas
         total_inseminacoes = estacao.inseminacoes.count()
-        
+
         # Diagnósticos
         diagnosticos = estacao.inseminacoes.aggregate(
-            positivos=Count('diagnosticos', filter=Q(diagnosticos__resultado='positivo')),
-            negativos=Count('diagnosticos', filter=Q(diagnosticos__resultado='negativo')),
-            inconclusivos=Count('diagnosticos', filter=Q(diagnosticos__resultado='inconclusivo'))
+            positivos=Count('diagnosticos', filter=Q(
+                diagnosticos__resultado='positivo')),
+            negativos=Count('diagnosticos', filter=Q(
+                diagnosticos__resultado='negativo')),
+            inconclusivos=Count('diagnosticos', filter=Q(
+                diagnosticos__resultado='inconclusivo'))
         )
-        
+
         return Response({
             'estatisticas_gerais': {
                 'total_femeas': total_femeas,
@@ -565,7 +589,8 @@ class ProtocoloIATFViewSet(BaseViewSet):
     """ViewSet para protocolos IATF"""
     queryset = ProtocoloIATF.objects.all()
     serializer_class = ProtocoloIATFSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     search_fields = ['nome', 'descricao']
     ordering_fields = ['nome', 'duracao_dias']
     ordering = ['nome']
@@ -580,7 +605,7 @@ class InseminacaoViewSet(BaseViewSet):
     search_fields = ['semen_utilizado', 'observacoes']
     ordering_fields = ['data_inseminacao', 'tipo']
     ordering = ['-data_inseminacao']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'animal', 'manejo', 'reprodutor', 'protocolo_iatf', 'estacao_monta'
@@ -596,7 +621,7 @@ class DiagnosticoGestacaoViewSet(BaseViewSet):
     search_fields = ['metodo', 'observacoes']
     ordering_fields = ['data_diagnostico', 'resultado']
     ordering = ['-data_diagnostico']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'inseminacao', 'manejo'
@@ -612,7 +637,7 @@ class PartoViewSet(BaseViewSet):
     search_fields = ['observacoes']
     ordering_fields = ['data_parto', 'resultado', 'peso_nascimento']
     ordering = ['-data_parto']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'mae', 'manejo', 'bezerro'
@@ -631,7 +656,7 @@ class VacinaViewSet(viewsets.ModelViewSet):
     search_fields = ['nome', 'fabricante', 'doencas_previne']
     ordering_fields = ['nome', 'fabricante']
     ordering = ['nome']
-    
+
     def get_queryset(self):
         return self.queryset.filter(ativa=True)
 
@@ -644,7 +669,7 @@ class MedicamentoViewSet(viewsets.ModelViewSet):
     search_fields = ['nome', 'fabricante', 'principio_ativo']
     ordering_fields = ['nome', 'fabricante', 'tipo']
     ordering = ['nome']
-    
+
     def get_queryset(self):
         return self.queryset.filter(ativo=True)
 
@@ -658,7 +683,7 @@ class VacinacaoViewSet(BaseViewSet):
     search_fields = ['lote_vacina', 'observacoes']
     ordering_fields = ['manejo__data_manejo', 'data_proxima_dose']
     ordering = ['-manejo__data_manejo']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'manejo', 'vacina'
@@ -673,7 +698,7 @@ class AdministracaoMedicamentoViewSet(BaseViewSet):
     search_fields = ['dosagem_aplicada', 'motivo_aplicacao']
     ordering_fields = ['manejo__data_manejo', 'data_fim_carencia']
     ordering = ['-manejo__data_manejo']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'manejo', 'medicamento'
@@ -684,28 +709,29 @@ class CalendarioSanitarioViewSet(BaseViewSet):
     """ViewSet para calendário sanitário"""
     queryset = CalendarioSanitario.objects.all()
     serializer_class = CalendarioSanitarioSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     filterset_class = CalendarioSanitarioFilter
     search_fields = ['descricao']
     ordering_fields = ['data_agendada', 'status', 'tipo_manejo']
     ordering = ['data_agendada']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'propriedade', 'vacina', 'medicamento', 'manejo_realizado', 'usuario'
         ).prefetch_related('animais_alvo', 'lotes_alvo')
-    
+
     @action(detail=False, methods=['get'])
     def proximos_vencimentos(self, request):
         """Retorna próximos vencimentos"""
         dias_antecedencia = int(request.query_params.get('dias', 7))
         data_limite = timezone.now().date() + timedelta(days=dias_antecedencia)
-        
+
         proximos = self.get_queryset().filter(
             data_agendada__lte=data_limite,
             status='agendado'
         )
-        
+
         serializer = self.get_serializer(proximos, many=True)
         return Response(serializer.data)
 
@@ -718,18 +744,19 @@ class ContaFinanceiraViewSet(BaseViewSet):
     """ViewSet para contas financeiras"""
     queryset = ContaFinanceira.objects.all()
     serializer_class = ContaFinanceiraSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     search_fields = ['nome', 'banco', 'agencia', 'conta']
     ordering_fields = ['nome', 'tipo', 'saldo_inicial']
     ordering = ['nome']
-    
+
     def get_queryset(self):
         queryset = super().get_queryset().select_related('propriedade')
-        
+
         # Adiciona saldo atual
         for conta in queryset:
             conta.saldo_atual = conta.get_saldo_atual()
-        
+
         return queryset
 
 
@@ -737,11 +764,12 @@ class CategoriaFinanceiraViewSet(BaseViewSet):
     """ViewSet para categorias financeiras"""
     queryset = CategoriaFinanceira.objects.all()
     serializer_class = CategoriaFinanceiraSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     search_fields = ['nome', 'descricao']
     ordering_fields = ['nome', 'tipo']
     ordering = ['tipo', 'nome']
-    
+
     def get_queryset(self):
         return super().get_queryset().filter(ativa=True)
 
@@ -750,40 +778,42 @@ class LancamentoFinanceiroViewSet(BaseViewSet):
     """ViewSet para lançamentos financeiros"""
     queryset = LancamentoFinanceiro.objects.all()
     serializer_class = LancamentoFinanceiroSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     filterset_class = LancamentoFinanceiroFilter
     search_fields = ['descricao', 'observacoes']
     ordering_fields = ['data_lancamento', 'valor', 'tipo']
     ordering = ['-data_lancamento']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'propriedade', 'categoria', 'conta_origem', 'conta_destino',
             'manejo_relacionado', 'animal_relacionado', 'usuario'
         )
-    
+
     @action(detail=False, methods=['get'])
     def fluxo_caixa(self, request):
         """Fluxo de caixa por período"""
         data_inicio = request.query_params.get('data_inicio')
         data_fim = request.query_params.get('data_fim')
-        
+
         queryset = self.get_queryset()
-        
+
         if data_inicio:
             queryset = queryset.filter(data_lancamento__gte=data_inicio)
         if data_fim:
             queryset = queryset.filter(data_lancamento__lte=data_fim)
-        
+
         # Agrupa por mês
         fluxo = queryset.extra(
             select={'mes': "DATE_FORMAT(data_lancamento, '%%Y-%%m')"}
         ).values('mes').annotate(
             entradas=Sum('valor', filter=Q(tipo='entrada')),
             saidas=Sum('valor', filter=Q(tipo='saida')),
-            saldo=Sum('valor', filter=Q(tipo='entrada')) - Sum('valor', filter=Q(tipo='saida'))
+            saldo=Sum('valor', filter=Q(tipo='entrada')) -
+            Sum('valor', filter=Q(tipo='saida'))
         ).order_by('mes')
-        
+
         return Response(list(fluxo))
 
 
@@ -795,18 +825,19 @@ class RelatorioPersonalizadoViewSet(BaseViewSet):
     """ViewSet para relatórios personalizados"""
     queryset = RelatorioPersonalizado.objects.all()
     serializer_class = RelatorioPersonalizadoSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
     search_fields = ['nome']
     ordering_fields = ['nome', 'tipo', 'data_criacao']
     ordering = ['nome']
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related(
             'propriedade', 'usuario'
         ).filter(
             Q(usuario=self.request.user) | Q(publico=True)
         )
-    
+
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user)
 
@@ -815,8 +846,9 @@ class ConfiguracaoSistemaViewSet(BaseViewSet):
     """ViewSet para configurações do sistema"""
     queryset = ConfiguracaoSistema.objects.all()
     serializer_class = ConfiguracaoSistemaSerializer
-    permission_classes = [permissions.IsAuthenticated, PropriedadeOwnerPermission]
-    
+    permission_classes = [
+        permissions.IsAuthenticated, PropriedadeOwnerPermission]
+
     def get_queryset(self):
         return super().get_queryset().select_related('propriedade')
 
@@ -833,7 +865,7 @@ class HistoricoLoteAnimalViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['motivo_movimentacao']
     ordering_fields = ['data_entrada', 'data_saida']
     ordering = ['-data_entrada']
-    
+
     def get_queryset(self):
         return self.queryset.select_related(
             'animal', 'lote', 'usuario'
@@ -848,17 +880,17 @@ class HistoricoOcupacaoAreaViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['motivo_movimentacao']
     ordering_fields = ['data_entrada', 'data_saida']
     ordering = ['-data_entrada']
-    
+
     def get_queryset(self):
         return self.queryset.select_related(
             'lote', 'area', 'usuario'
         ).filter(area__propriedade__proprietario=self.request.user)
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        
+
         # Adiciona período de ocupação
         for historico in queryset:
             historico.periodo_ocupacao = historico.get_periodo_ocupacao()
-        
+
         return queryset

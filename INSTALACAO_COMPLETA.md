@@ -227,6 +227,6 @@ Para dúvidas ou problemas:
 
 ## 🎯 O Sistema está Pronto!
 
-O AgroNexus - Sistema Fertili está completamente funcional e pronto para gerenciar sua propriedade pecuária. Todas as funcionalidades foram implementadas seguindo as melhores práticas de desenvolvimento.
+O AgroNexus - Sistema  está completamente funcional e pronto para gerenciar sua propriedade pecuária. Todas as funcionalidades foram implementadas seguindo as melhores práticas de desenvolvimento.
 
 **Bom trabalho! 🚀**

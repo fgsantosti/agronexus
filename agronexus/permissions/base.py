@@ -1,5 +1,5 @@
 """
-AgroNexus - Sistema Fertili
+AgroNexus - Sistema 
 Permissões customizadas para API REST
 """
 

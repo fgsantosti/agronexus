@@ -347,4 +347,4 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 
 ---
 
-**AgroNexus - Sistema Fertili** - Transformando a gestão pecuária através da tecnologia! 🚀
+**AgroNexus - Sistema ** - Transformando a gestão pecuária através da tecnologia! 🚀

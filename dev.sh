@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AgroNexus - Sistema Fertili
+# AgroNexus - Sistema 
 # Script de desenvolvimento
 
 # Cores para output
@@ -10,7 +10,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 AgroNexus - Sistema Fertili${NC}"
+echo -e "${BLUE}🚀 AgroNexus - Sistema ${NC}"
 echo -e "${BLUE}================================${NC}"
 
 # Função para executar comandos

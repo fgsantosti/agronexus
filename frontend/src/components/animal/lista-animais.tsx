@@ -21,7 +21,6 @@ import {
   ChevronDown,
   Settings
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface Animal {
   id: string
@@ -176,7 +175,11 @@ export function ListaAnimais() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => router.push('/rebanho/importar')}
+          >
             <Upload className="w-4 h-4 mr-2" />
             Importar Animais
           </Button>

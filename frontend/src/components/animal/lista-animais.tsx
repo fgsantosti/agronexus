@@ -21,28 +21,8 @@ import {
   ChevronDown,
   Settings
 } from 'lucide-react'
-
-interface Animal {
-  id: string
-  identificacao_unica: string
-  nome_registro: string
-  sexo: 'M' | 'F'
-  data_nascimento: string
-  raca: string
-  categoria: string
-  status: string
-  peso_atual?: number
-  lote_atual?: string
-  gmd?: number
-  observacoes?: string
-}
-
-interface RebanhoStats {
-  total_animais: number
-  lotes_com_animais: number
-  peso_medio: number
-  peso_total: number
-}
+import { ExportAnimais } from './export-animais'
+import { Animal, RebanhoStats, FiltrosAnimal } from '@/types/animal'
 
 export function ListaAnimais() {
   const router = useRouter()
@@ -56,7 +36,7 @@ export function ListaAnimais() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('animais')
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<FiltrosAnimal>({
     categoria: '',
     sexo: '',
     status: 'ativo',
@@ -278,9 +258,10 @@ export function ListaAnimais() {
                     Número
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4" />
-                  </Button>
+                  <ExportAnimais 
+                    animais={animais} 
+                    animaisFiltrados={animaisFiltrados} 
+                  />
                   <Button variant="outline" size="sm">
                     <Settings className="w-4 h-4" />
                   </Button>

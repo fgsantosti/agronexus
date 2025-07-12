@@ -14,6 +14,7 @@ import {
   Stethoscope,
   TrendingUp,
   Baby,
+  Beef,
 } from "lucide-react"
 
 import { NavMain } from "@/components/navigation/nav-main"
@@ -76,21 +77,7 @@ const data = {
     {
       title: "Rebanho",
       url: "/rebanho",
-      icon: Heart,
-      items: [
-        {
-          title: "Animais",
-          url: "/rebanho/animais",
-        },
-        {
-          title: "Grupos",
-          url: "/rebanho/grupos",
-        },
-        {
-          title: "Genealogia",
-          url: "/rebanho/genealogia",
-        },
-      ],
+      icon: Beef,
     },
     {
       title: "Sanidade",
@@ -202,9 +189,9 @@ const data = {
   ],
   projects: [
     {
-      name: "Novo Animal",
-      url: "/rebanho/animais/novo",
-      icon: Heart,
+      name: "Cadastrar Animal",
+      url: "/rebanho",
+      icon: Beef,
     },
     {
       name: "Registrar Tratamento",

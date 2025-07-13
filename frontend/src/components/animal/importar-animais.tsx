@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { FullscreenDialog, FullscreenDialogContent, FullscreenDialogDescription, FullscreenDialogHeader, FullscreenDialogTitle, FullscreenDialogTrigger, FullscreenDialogBody } from "@/components/ui/fullscreen-dialog"
 import { 
   Upload, 
   Download, 
@@ -542,165 +543,163 @@ export function ImportarAnimais() {
                   Baixar Template
                 </Button>
                 
-                <Dialog>
-                  <DialogTrigger asChild>
+                <FullscreenDialog>
+                  <FullscreenDialogTrigger asChild>
                     <Button variant="outline" size="lg">
                       <HelpCircle className="w-4 h-4 mr-2" />
                       Ver Guia de Importação
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="w-screen h-screen max-w-none max-h-none m-0 p-0 rounded-none">
-                    <div className="flex flex-col h-full">
-                      <DialogHeader className="p-6 border-b bg-white sticky top-0 z-10">
-                        <DialogTitle className="text-xl">Guia de Importação de Animais</DialogTitle>
-                        <DialogDescription>
-                          Informações detalhadas sobre como preparar seu arquivo CSV para importação
-                        </DialogDescription>
-                      </DialogHeader>
-                      
-                      <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-                        <div className="max-w-7xl mx-auto">
-                          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                            {/* Colunas do Template */}
-                            <div className="space-y-6">
-                              <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                                <h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2 text-lg">
-                                  <FileSpreadsheet className="w-5 h-5" />
-                                  Colunas Obrigatórias
-                                </h3>
-                                <div className="space-y-3 text-sm">
-                                  <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                    <strong className="text-blue-800">identificacao_unica:</strong>
-                                    <p className="text-gray-600 mt-1">Código único do animal (ex: BOV001, CAP002)</p>
-                                  </div>
-                                  <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                    <strong className="text-blue-800">nome_registro:</strong>
-                                    <p className="text-gray-600 mt-1">Nome do animal</p>
-                                  </div>
-                                  <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                    <strong className="text-blue-800">especie:</strong>
-                                    <p className="text-gray-600 mt-1">bovino, caprino, ovino, equino, suino</p>
-                                  </div>
-                                  <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                    <strong className="text-blue-800">sexo:</strong>
-                                    <p className="text-gray-600 mt-1">M (Macho) ou F (Fêmea)</p>
-                                  </div>
-                                  <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                    <strong className="text-blue-800">data_nascimento:</strong>
-                                    <p className="text-gray-600 mt-1">Formato: YYYY-MM-DD (ex: 2024-01-15)</p>
-                                  </div>
-                                  <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                    <strong className="text-blue-800">categoria:</strong>
-                                    <p className="text-gray-600 mt-1">Varia por espécie (ver categorias ao lado)</p>
-                                  </div>
-                                  <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                    <strong className="text-blue-800">lote_atual:</strong>
-                                    <p className="text-gray-600 mt-1">Nome do lote onde o animal está</p>
-                                  </div>
-                                  <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                    <strong className="text-blue-800">pasto:</strong>
-                                    <p className="text-gray-600 mt-1">Nome do pasto/área onde o animal está</p>
-                                  </div>
+                  </FullscreenDialogTrigger>
+                  <FullscreenDialogContent>
+                    <FullscreenDialogHeader>
+                      <FullscreenDialogTitle>Guia de Importação de Animais</FullscreenDialogTitle>
+                      <FullscreenDialogDescription>
+                        Informações detalhadas sobre como preparar seu arquivo CSV para importação
+                      </FullscreenDialogDescription>
+                    </FullscreenDialogHeader>
+                    
+                    <FullscreenDialogBody>
+                      <div className="max-w-7xl mx-auto p-6">
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                          {/* Colunas do Template */}
+                          <div className="space-y-6">
+                            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                              <h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2 text-lg">
+                                <FileSpreadsheet className="w-5 h-5" />
+                                Colunas Obrigatórias
+                              </h3>
+                              <div className="space-y-3 text-sm">
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">identificacao_unica:</strong>
+                                  <p className="text-gray-600 mt-1">Código único do animal (ex: BOV001, CAP002)</p>
                                 </div>
-                                
-                                <h4 className="font-semibold text-blue-900 mt-6 mb-4 text-lg">Colunas Opcionais</h4>
-                                <div className="space-y-3 text-sm">
-                                  <div className="p-3 bg-blue-25 rounded border border-blue-200">
-                                    <strong className="text-blue-700">raca:</strong>
-                                    <span className="text-gray-600 ml-2">Raça do animal</span>
-                                  </div>
-                                  <div className="p-3 bg-blue-25 rounded border border-blue-200">
-                                    <strong className="text-blue-700">peso_atual:</strong>
-                                    <span className="text-gray-600 ml-2">Peso em kg (somente números)</span>
-                                  </div>
-                                  <div className="p-3 bg-blue-25 rounded border border-blue-200">
-                                    <strong className="text-blue-700">pai:</strong>
-                                    <span className="text-gray-600 ml-2">ID do reprodutor pai</span>
-                                  </div>
-                                  <div className="p-3 bg-blue-25 rounded border border-blue-200">
-                                    <strong className="text-blue-700">mae:</strong>
-                                    <span className="text-gray-600 ml-2">ID da matriz mãe</span>
-                                  </div>
-                                  <div className="p-3 bg-blue-25 rounded border border-blue-200">
-                                    <strong className="text-blue-700">observacoes:</strong>
-                                    <span className="text-gray-600 ml-2">Informações adicionais</span>
-                                  </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">nome_registro:</strong>
+                                  <p className="text-gray-600 mt-1">Nome do animal</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">especie:</strong>
+                                  <p className="text-gray-600 mt-1">bovino, caprino, ovino, equino, suino</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">sexo:</strong>
+                                  <p className="text-gray-600 mt-1">M (Macho) ou F (Fêmea)</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">data_nascimento:</strong>
+                                  <p className="text-gray-600 mt-1">Formato: YYYY-MM-DD (ex: 2024-01-15)</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">categoria:</strong>
+                                  <p className="text-gray-600 mt-1">Varia por espécie (ver categorias ao lado)</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">lote_atual:</strong>
+                                  <p className="text-gray-600 mt-1">Nome do lote onde o animal está</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">pasto:</strong>
+                                  <p className="text-gray-600 mt-1">Nome do pasto/área onde o animal está</p>
                                 </div>
                               </div>
-
-                              {/* Dicas importantes */}
-                              <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-                                <h3 className="font-semibold text-green-900 mb-4 text-lg">💡 Dicas Importantes</h3>
-                                <div className="space-y-3 text-sm text-green-800">
-                                  <div className="flex items-start gap-2">
-                                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
-                                    <span>Use o template baixado como base</span>
-                                  </div>
-                                  <div className="flex items-start gap-2">
-                                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
-                                    <span>Primeira linha deve ser o cabeçalho</span>
-                                  </div>
-                                  <div className="flex items-start gap-2">
-                                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
-                                    <span>Datas devem estar no formato YYYY-MM-DD</span>
-                                  </div>
-                                  <div className="flex items-start gap-2">
-                                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
-                                    <span>Pesos devem ser números (sem vírgulas)</span>
-                                  </div>
-                                  <div className="flex items-start gap-2">
-                                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
-                                    <span>IDs de pai/mãe devem existir na planilha</span>
-                                  </div>
-                                  <div className="flex items-start gap-2">
-                                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
-                                    <span>Máximo de 1000 animais por importação</span>
-                                  </div>
+                              
+                              <h4 className="font-semibold text-blue-900 mt-6 mb-4 text-lg">Colunas Opcionais</h4>
+                              <div className="space-y-3 text-sm">
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">raca:</strong>
+                                  <span className="text-gray-600 ml-2">Raça do animal</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">peso_atual:</strong>
+                                  <span className="text-gray-600 ml-2">Peso em kg (somente números)</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">pai:</strong>
+                                  <span className="text-gray-600 ml-2">ID do reprodutor pai</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">mae:</strong>
+                                  <span className="text-gray-600 ml-2">ID da matriz mãe</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">observacoes:</strong>
+                                  <span className="text-gray-600 ml-2">Informações adicionais</span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Categorias por espécie */}
-                            <div className="xl:col-span-2">
-                              <div className="bg-amber-50 p-6 rounded-lg border border-amber-200 h-fit">
-                                <h3 className="font-semibold text-amber-900 mb-6 flex items-center gap-2 text-lg">
-                                  <Badge className="w-5 h-5" />
-                                  Categorias por Espécie
-                                </h3>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                  {Object.entries(ESPECIES_RACAS_CATEGORIAS).map(([especie, dados]) => (
-                                    <div key={especie} className="bg-white p-4 rounded-lg border border-amber-200">
-                                      <div className="font-bold text-amber-800 mb-3 text-lg">{dados.nome_display}</div>
-                                      
-                                      <div className="mb-4">
-                                        <h5 className="font-semibold text-amber-700 mb-2">Categorias:</h5>
-                                        <div className="grid grid-cols-2 gap-2">
-                                          {dados.categorias.map(cat => (
-                                            <div key={cat.codigo} className="text-sm bg-amber-50 px-2 py-1 rounded">
-                                              <strong>{cat.nome}</strong>
-                                              <div className="text-xs text-amber-600">({cat.codigo})</div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      
-                                      <div>
-                                        <h5 className="font-semibold text-amber-700 mb-2">Raças disponíveis:</h5>
-                                        <div className="text-xs text-amber-600 leading-relaxed">
-                                          {dados.racas.join(' • ')}
-                                        </div>
+                            {/* Dicas importantes */}
+                            <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+                              <h3 className="font-semibold text-green-900 mb-4 text-lg">💡 Dicas Importantes</h3>
+                              <div className="space-y-3 text-sm text-green-800">
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Use o template baixado como base</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Primeira linha deve ser o cabeçalho</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Datas devem estar no formato YYYY-MM-DD</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Pesos devem ser números (sem vírgulas)</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>IDs de pai/mãe devem existir na planilha</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Máximo de 1000 animais por importação</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Categorias por espécie */}
+                          <div className="xl:col-span-2">
+                            <div className="bg-amber-50 p-6 rounded-lg border border-amber-200 h-fit">
+                              <h3 className="font-semibold text-amber-900 mb-6 flex items-center gap-2 text-lg">
+                                <Badge className="w-5 h-5" />
+                                Categorias por Espécie
+                              </h3>
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {Object.entries(ESPECIES_RACAS_CATEGORIAS).map(([especie, dados]) => (
+                                  <div key={especie} className="bg-white p-4 rounded-lg border border-amber-200">
+                                    <div className="font-bold text-amber-800 mb-3 text-lg">{dados.nome_display}</div>
+                                    
+                                    <div className="mb-4">
+                                      <h5 className="font-semibold text-amber-700 mb-2">Categorias:</h5>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {dados.categorias.map(cat => (
+                                          <div key={cat.codigo} className="text-sm bg-amber-50 px-2 py-1 rounded">
+                                            <strong>{cat.nome}</strong>
+                                            <div className="text-xs text-amber-600">({cat.codigo})</div>
+                                          </div>
+                                        ))}
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
+                                    
+                                    <div>
+                                      <h5 className="font-semibold text-amber-700 mb-2">Raças disponíveis:</h5>
+                                      <div className="text-xs text-amber-600 leading-relaxed">
+                                        {dados.racas.join(' • ')}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </FullscreenDialogBody>
+                  </FullscreenDialogContent>
+                </FullscreenDialog>
               </div>
 
               {/* Area de upload simplificada */}

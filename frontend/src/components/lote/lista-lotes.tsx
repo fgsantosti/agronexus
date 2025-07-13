@@ -235,6 +235,27 @@ export function ListaLotes() {
                               {lote.descricao}
                             </div>
                           )}
+                          {/* Características do lote */}
+                          <div className="flex gap-1 mt-1">
+                            {lote.aptidao && (
+                              <Badge variant="outline" className="text-xs">
+                                {lote.aptidao === 'dupla_aptidao' ? 'Dupla Aptidão' : 
+                                 lote.aptidao === 'corte' ? 'Corte' : 'Leite'}
+                              </Badge>
+                            )}
+                            {lote.finalidade && (
+                              <Badge variant="secondary" className="text-xs">
+                                {lote.finalidade === 'cria' ? 'Cria' : 
+                                 lote.finalidade === 'recria' ? 'Recria' : 'Engorda'}
+                              </Badge>
+                            )}
+                            {lote.sistema_criacao && (
+                              <Badge variant="outline" className="text-xs">
+                                {lote.sistema_criacao === 'semi_extensivo' ? 'Semi-extensivo' : 
+                                 lote.sistema_criacao === 'intensivo' ? 'Intensivo' : 'Extensivo'}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>

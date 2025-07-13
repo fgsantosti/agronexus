@@ -287,6 +287,54 @@ export function EditarLote({ loteId }: EditarLoteProps) {
                 rows={3}
               />
             </div>
+
+            {/* Características do Lote */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="aptidao">Aptidão</Label>
+                <Select value={formData.aptidao || 'none'} onValueChange={(value) => handleChange('aptidao', value === 'none' ? undefined : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a aptidão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não especificada</SelectItem>
+                    <SelectItem value="corte">Corte</SelectItem>
+                    <SelectItem value="leite">Leite</SelectItem>
+                    <SelectItem value="dupla_aptidao">Dupla Aptidão</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="finalidade">Finalidade</Label>
+                <Select value={formData.finalidade || 'none'} onValueChange={(value) => handleChange('finalidade', value === 'none' ? undefined : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a finalidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não especificada</SelectItem>
+                    <SelectItem value="cria">Cria</SelectItem>
+                    <SelectItem value="recria">Recria</SelectItem>
+                    <SelectItem value="engorda">Engorda</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sistema_criacao">Sistema de Criação</Label>
+                <Select value={formData.sistema_criacao || 'none'} onValueChange={(value) => handleChange('sistema_criacao', value === 'none' ? undefined : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o sistema" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não especificado</SelectItem>
+                    <SelectItem value="intensivo">Intensivo</SelectItem>
+                    <SelectItem value="extensivo">Extensivo</SelectItem>
+                    <SelectItem value="semi_extensivo">Semi-Extensivo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

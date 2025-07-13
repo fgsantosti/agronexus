@@ -40,7 +40,8 @@ const CRITERIOS_SUGERIDOS = [
   'Animais para engorda',
   'Animais doentes',
   'Fêmeas reprodutoras',
-  'Machos castrados'
+  'Machos castrados',
+  'Outros'
 ]
 
 export function CadastroLote() {
@@ -65,7 +66,7 @@ export function CadastroLote() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.nome.trim() || !formData.criterio_agrupamento.trim()) {
+    if (!formData.nome.trim() || !formData.criterio_agrupamento?.trim()) {
       alert('Nome e critério de agrupamento são obrigatórios')
       return
     }
@@ -141,7 +142,7 @@ export function CadastroLote() {
               
               <div className="space-y-2">
                 <Label htmlFor="criterio">Critério de Agrupamento *</Label>
-                <Select value={formData.criterio_agrupamento} onValueChange={(value) => handleChange('criterio_agrupamento', value)}>
+                <Select value={formData.criterio_agrupamento || ""} onValueChange={(value) => handleChange('criterio_agrupamento', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um critério" />
                   </SelectTrigger>

@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Edit, MapPin, Users, BarChart3, Trash2, AlertTriangle } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ArrowLeft, Edit, MapPin, Users, BarChart3, Trash2, AlertTriangle, Eye, UserPlus, Grid3X3, List } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useLotes } from '@/hooks/useLotes'
+import { useAnimais } from '@/hooks/useAnimais'
 import { Lote, EstatisticasLote } from '@/types/lote'
+import { Animal } from '@/types/animal'
+import { AnimalCard } from '@/components/animal/animal-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,13 +32,23 @@ interface DetalheLoteProps {
 export function DetalheLote({ loteId }: DetalheLoteProps) {
   const router = useRouter()
   const { lotes, excluirLote, loading } = useLotes()
+  const { animais, getAnimaisByLote, loading: animaisLoading } = useAnimais()
   const [lote, setLote] = useState<Lote | null>(null)
+  const [animaisDoLote, setAnimaisDoLote] = useState<Animal[]>([])
   const [deleting, setDeleting] = useState(false)
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
 
   useEffect(() => {
     const loteEncontrado = lotes.find(l => l.id === loteId)
     setLote(loteEncontrado || null)
   }, [loteId, lotes])
+
+  useEffect(() => {
+    if (loteId) {
+      const animaisLote = getAnimaisByLote(loteId)
+      setAnimaisDoLote(animaisLote)
+    }
+  }, [loteId, getAnimaisByLote, animais])
 
   const handleDelete = async () => {
     if (!lote) return
@@ -227,6 +241,31 @@ export function DetalheLote({ loteId }: DetalheLoteProps) {
                     {lote.ativo ? 'Ativo' : 'Inativo'}
                   </Badge>
                 </div>
+
+                {lote.aptidao && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Aptidão</label>
+                    <p className="capitalize">
+                      {lote.aptidao === 'dupla_aptidao' ? 'Dupla Aptidão' : lote.aptidao}
+                    </p>
+                  </div>
+                )}
+
+                {lote.finalidade && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Finalidade</label>
+                    <p className="capitalize">{lote.finalidade}</p>
+                  </div>
+                )}
+
+                {lote.sistema_criacao && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Sistema de Criação</label>
+                    <p className="capitalize">
+                      {lote.sistema_criacao === 'semi_extensivo' ? 'Semi-extensivo' : lote.sistema_criacao}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -294,18 +333,185 @@ export function DetalheLote({ loteId }: DetalheLoteProps) {
         <TabsContent value="animals">
           <Card>
             <CardHeader>
-              <CardTitle>Animais do Lote</CardTitle>
-              <CardDescription>
-                Lista de todos os animais pertencentes a este lote
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Animais do Lote</CardTitle>
+                  <CardDescription>
+                    Lista de todos os animais pertencentes a este lote ({animaisDoLote.length} animais)
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Toggle de visualização */}
+                  <div className="flex items-center border rounded-lg p-1">
+                    <Button
+                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('table')}
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('cards')}
+                    >
+                      <Grid3X3 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  <Button onClick={() => router.push(`/animais/novo?lote=${loteId}`)}>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Adicionar Animal
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Funcionalidade de listagem de animais será implementada em breve
-                </p>
-              </div>
+              {animaisLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mb-2 mx-auto"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                  </div>
+                </div>
+              ) : animaisDoLote.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">
+                    Nenhum animal encontrado neste lote
+                  </p>
+                  <Button onClick={() => router.push(`/animais/novo?lote=${loteId}`)}>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Adicionar Primeiro Animal
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Resumo dos animais */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-2xl font-bold">{animaisDoLote.length}</div>
+                        <div className="text-sm text-muted-foreground">Total de Animais</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-2xl font-bold">
+                          {animaisDoLote.filter(a => a.sexo === 'M').length}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Machos</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-2xl font-bold">
+                          {animaisDoLote.filter(a => a.sexo === 'F').length}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Fêmeas</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-2xl font-bold">
+                          {animaisDoLote.filter(a => a.peso_atual).length > 0
+                            ? Math.round(
+                                animaisDoLote
+                                  .filter(a => a.peso_atual)
+                                  .reduce((acc, a) => acc + (a.peso_atual || 0), 0) /
+                                animaisDoLote.filter(a => a.peso_atual).length
+                              )
+                            : 0}kg
+                        </div>
+                        <div className="text-sm text-muted-foreground">Peso Médio</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Tabela ou Cards de animais */}
+                  {viewMode === 'table' ? (
+                    <div className="border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Identificação</TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Sexo</TableHead>
+                            <TableHead>Categoria</TableHead>
+                            <TableHead>Raça</TableHead>
+                            <TableHead>Peso Atual</TableHead>
+                            <TableHead>GMD</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {animaisDoLote.map((animal) => (
+                            <TableRow key={animal.id}>
+                              <TableCell className="font-medium">
+                                {animal.identificacao_unica}
+                              </TableCell>
+                              <TableCell>{animal.nome_registro || '-'}</TableCell>
+                              <TableCell>
+                                <Badge variant={animal.sexo === 'M' ? 'default' : 'secondary'}>
+                                  {animal.sexo === 'M' ? 'Macho' : 'Fêmea'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{animal.categoria}</TableCell>
+                              <TableCell>{typeof animal.raca === 'string' ? animal.raca : animal.raca?.nome || '-'}</TableCell>
+                              <TableCell>
+                                {animal.peso_atual ? `${animal.peso_atual}kg` : '-'}
+                              </TableCell>
+                              <TableCell>
+                                {animal.gmd ? `${animal.gmd}kg/dia` : '-'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={animal.status === 'ativo' ? 'default' : 'secondary'}>
+                                  {animal.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.push(`/animais/${animal.id}`)}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.push(`/animais/${animal.id}/editar`)}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {animaisDoLote.map((animal) => (
+                        <AnimalCard
+                          key={animal.id}
+                          animal={animal}
+                          onView={(id) => router.push(`/animais/${id}`)}
+                          onEdit={(id) => router.push(`/animais/${id}/editar`)}
+                          showMoveAction={true}
+                          onMove={(id) => {
+                            // TODO: Implementar funcionalidade de mover animal entre lotes
+                            console.log('Mover animal:', id)
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

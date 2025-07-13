@@ -32,7 +32,7 @@ export function useLotes(): UseLotesReturn {
         // Dados iniciais se não houver lotes
         const lotesIniciais: Lote[] = [
           {
-            id: '1',
+            id: 'lote-1',
             propriedade: 'Fazenda Santa Maria',
             propriedade_id: 'prop-1',
             nome: 'Lote Novilhas',
@@ -54,7 +54,7 @@ export function useLotes(): UseLotesReturn {
             gmd_medio: 0.850
           },
           {
-            id: '2',
+            id: 'lote-2',
             propriedade: 'Fazenda Santa Maria',
             propriedade_id: 'prop-1',
             nome: 'Lote Bezerros',
@@ -68,7 +68,7 @@ export function useLotes(): UseLotesReturn {
             gmd_medio: 0.650
           },
           {
-            id: '3',
+            id: 'lote-3',
             propriedade: 'Fazenda Santa Maria',
             propriedade_id: 'prop-1',
             nome: 'Lote Reprodutores',

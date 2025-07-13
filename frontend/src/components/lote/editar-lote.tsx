@@ -40,7 +40,8 @@ const CRITERIOS_SUGERIDOS = [
   'Animais para engorda',
   'Animais doentes',
   'Fêmeas reprodutoras',
-  'Machos castrados'
+  'Machos castrados',
+  'Outros'
 ]
 
 interface EditarLoteProps {
@@ -57,6 +58,9 @@ export function EditarLote({ loteId }: EditarLoteProps) {
     descricao: '',
     criterio_agrupamento: '',
     area_atual_id: '',
+    aptidao: undefined,
+    finalidade: undefined,
+    sistema_criacao: undefined,
     ativo: true
   })
 
@@ -69,6 +73,9 @@ export function EditarLote({ loteId }: EditarLoteProps) {
         descricao: loteEncontrado.descricao || '',
         criterio_agrupamento: loteEncontrado.criterio_agrupamento,
         area_atual_id: loteEncontrado.area_atual_id || '',
+        aptidao: loteEncontrado.aptidao,
+        finalidade: loteEncontrado.finalidade,
+        sistema_criacao: loteEncontrado.sistema_criacao,
         ativo: loteEncontrado.ativo
       })
     }
@@ -84,7 +91,7 @@ export function EditarLote({ loteId }: EditarLoteProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.nome.trim() || !formData.criterio_agrupamento.trim()) {
+    if (!formData.nome.trim() || !formData.criterio_agrupamento?.trim()) {
       alert('Nome e critério de agrupamento são obrigatórios')
       return
     }
@@ -190,7 +197,7 @@ export function EditarLote({ loteId }: EditarLoteProps) {
               
               <div className="space-y-2">
                 <Label htmlFor="criterio">Critério de Agrupamento *</Label>
-                <Select value={formData.criterio_agrupamento} onValueChange={(value) => handleChange('criterio_agrupamento', value)}>
+                <Select value={formData.criterio_agrupamento || ""} onValueChange={(value) => handleChange('criterio_agrupamento', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um critério" />
                   </SelectTrigger>
@@ -200,6 +207,71 @@ export function EditarLote({ loteId }: EditarLoteProps) {
                         {criterio}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="aptidao">Aptidão</Label>
+                <Select 
+                  value={formData.aptidao || "none"} 
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    aptidao: value === "none" ? undefined : value as 'corte' | 'leite' | 'dupla_aptidao'
+                  }))}
+                >
+                  <SelectTrigger id="aptidao">
+                    <SelectValue placeholder="Selecione a aptidão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não especificado</SelectItem>
+                    <SelectItem value="corte">Corte</SelectItem>
+                    <SelectItem value="leite">Leite</SelectItem>
+                    <SelectItem value="dupla_aptidao">Dupla Aptidão</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="finalidade">Finalidade</Label>
+                <Select 
+                  value={formData.finalidade || "none"} 
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    finalidade: value === "none" ? undefined : value as 'cria' | 'recria' | 'engorda'
+                  }))}
+                >
+                  <SelectTrigger id="finalidade">
+                    <SelectValue placeholder="Selecione a finalidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não especificado</SelectItem>
+                    <SelectItem value="cria">Cria</SelectItem>
+                    <SelectItem value="recria">Recria</SelectItem>
+                    <SelectItem value="engorda">Engorda</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sistema_criacao">Sistema de Criação</Label>
+                <Select 
+                  value={formData.sistema_criacao || "none"} 
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    sistema_criacao: value === "none" ? undefined : value as 'intensivo' | 'extensivo' | 'semi_extensivo'
+                  }))}
+                >
+                  <SelectTrigger id="sistema_criacao">
+                    <SelectValue placeholder="Selecione o sistema de criação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não especificado</SelectItem>
+                    <SelectItem value="intensivo">Intensivo</SelectItem>
+                    <SelectItem value="extensivo">Extensivo</SelectItem>
+                    <SelectItem value="semi_extensivo">Semi-extensivo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -232,12 +304,12 @@ export function EditarLote({ loteId }: EditarLoteProps) {
           <CardContent>
             <div className="space-y-2">
               <Label htmlFor="area">Área Atual</Label>
-              <Select value={formData.area_atual_id || ''} onValueChange={(value) => handleChange('area_atual_id', value)}>
+              <Select value={formData.area_atual_id || 'none'} onValueChange={(value) => handleChange('area_atual_id', value === 'none' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma área (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem área definida</SelectItem>
+                  <SelectItem value="none">Sem área definida</SelectItem>
                   {areasDisponiveis.map((area) => (
                     <SelectItem key={area.id} value={area.id}>
                       <div className="flex items-center justify-between w-full">

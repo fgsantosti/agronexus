@@ -7,6 +7,9 @@ export interface Lote {
   criterio_agrupamento: string
   area_atual?: Area
   area_atual_id?: string
+  aptidao?: 'corte' | 'leite' | 'dupla_aptidao'
+  finalidade?: 'cria' | 'recria' | 'engorda'
+  sistema_criacao?: 'intensivo' | 'extensivo' | 'semi_extensivo'
   ativo: boolean
   data_criacao: string
   data_ultima_atualizacao?: string
@@ -56,5 +59,8 @@ export interface LoteFormData {
   descricao?: string
   criterio_agrupamento: string
   area_atual_id?: string
+  aptidao?: 'corte' | 'leite' | 'dupla_aptidao'
+  finalidade?: 'cria' | 'recria' | 'engorda'
+  sistema_criacao?: 'intensivo' | 'extensivo' | 'semi_extensivo'
   ativo: boolean
 }

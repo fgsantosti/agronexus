@@ -25,7 +25,6 @@ interface AnimalData {
   identificacao_unica: string
   nome_registro: string
   brinco_eletronico?: string
-  chip?: string
   
   // Passo 2: Informações Básicas
   sexo: 'M' | 'F' | ''
@@ -139,7 +138,7 @@ export function CadastroAnimal() {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(animalData.identificacao_unica && animalData.nome_registro)
+        return !!(animalData.identificacao_unica)
       case 2:
         return !!(animalData.sexo && animalData.data_nascimento && animalData.especie && animalData.raca && animalData.categoria)
       case 3:
@@ -290,7 +289,7 @@ export function CadastroAnimal() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="nome_registro">Nome do Registro *</Label>
+                <Label htmlFor="nome_registro">Nome do Registro</Label>
                 <Input
                   id="nome_registro"
                   placeholder="Ex: Estrela da Manhã"
@@ -298,22 +297,20 @@ export function CadastroAnimal() {
                   onChange={(e) => updateAnimalData('nome_registro', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="brinco_eletronico">Brinco Eletrônico</Label>
                 <Input
                   id="brinco_eletronico"
+                  type="number"
                   placeholder="Ex: 982000123456789"
                   value={animalData.brinco_eletronico || ''}
                   onChange={(e) => updateAnimalData('brinco_eletronico', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="chip">Chip</Label>
-                <Input
-                  id="chip"
-                  placeholder="Ex: 982000123456789"
-                  value={animalData.chip || ''}
-                  onChange={(e) => updateAnimalData('chip', e.target.value)}
+                  onKeyDown={(e) => {
+                    // Permitir apenas números, backspace, delete, tab, escape, enter, home, end, left, right
+                    if (!/[\d]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                      e.preventDefault()
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -482,6 +479,7 @@ export function CadastroAnimal() {
                   <SelectContent>
                     <SelectItem value="proprio">Próprio</SelectItem>
                     <SelectItem value="compra">Compra</SelectItem>
+                    <SelectItem value="leilao">Leilão</SelectItem>
                     <SelectItem value="doacao">Doação</SelectItem>
                     <SelectItem value="parceria">Parceria</SelectItem>
                   </SelectContent>
@@ -619,7 +617,7 @@ export function CadastroAnimal() {
               <div className="mt-6 p-4 bg-muted rounded-lg">
                 <h4 className="font-medium mb-2">Resumo dos Dados</h4>
                 <div className="text-sm space-y-1">
-                  <p><span className="font-medium">Identificação:</span> {animalData.identificacao_unica} - {animalData.nome_registro}</p>
+                  <p><span className="font-medium">Identificação:</span> {animalData.identificacao_unica}{animalData.nome_registro ? ` - ${animalData.nome_registro}` : ''}</p>
                   <p><span className="font-medium">Espécie:</span> {especies.find(e => e.nome === animalData.especie)?.nome_display || animalData.especie}</p>
                   <p><span className="font-medium">Animal:</span> {animalData.sexo === 'M' ? 'Macho' : 'Fêmea'} - {getRacasPorEspecie(animalData.especie).find(r => r.id === animalData.raca)?.nome || animalData.raca} - {getCategoriasPorEspecie().find(c => c.value === animalData.categoria)?.label || animalData.categoria}</p>
                   <p><span className="font-medium">Localização:</span> {animalData.lote_atual} - {animalData.pasto}</p>

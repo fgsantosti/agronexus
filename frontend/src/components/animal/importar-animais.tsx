@@ -30,13 +30,15 @@ import { useAnimaisImportados } from '@/hooks/useAnimaisImportados'
 interface AnimalImportacao {
   linha: number
   identificacao_unica: string
-  nome_registro: string
+  nome_registro?: string
+  brinco_eletronico?: string
   especie: string
   raca: string
   sexo: string
   data_nascimento: string
   categoria: string
   peso_atual?: string
+  origem: string
   lote_atual: string
   pasto: string
   pai?: string
@@ -56,12 +58,14 @@ interface ResultadoImportacao {
 const TEMPLATE_HEADERS = [
   'identificacao_unica',
   'nome_registro', 
+  'brinco_eletronico',
   'especie',
   'raca',
   'sexo',
   'data_nascimento',
   'categoria',
   'peso_atual',
+  'origem',
   'lote_atual',
   'pasto',
   'pai',
@@ -154,26 +158,26 @@ export function ImportarAnimais() {
       // Cabeçalho
       TEMPLATE_HEADERS.join(','),
       // Bovinos
-      'BOV001,Estrela da Manhã,bovino,Nelore,F,2022-03-15,novilha,380,Lote Novilhas,Pasto 1,,,Animal de boa genética',
-      'BOV002,Touro Supremo,bovino,Angus,M,2020-01-10,touro,850,Reprodutores,Pasto Central,,,Reprodutor principal da fazenda',
-      'BOV003,Bezerra Bella,bovino,Brahman,F,2024-05-20,bezerra,120,Lote Bezerras,Pasto 3,BOV002,BOV001,Filha de Touro Supremo',
-      'BOV004,Novilho Forte,bovino,Canchim,M,2023-08-12,novilho,450,Lote Engorda,Pasto 2,,,Pronto para abate',
+      'BOV001,Estrela da Manhã,982000123456789,bovino,Nelore,F,2022-03-15,novilha,380,proprio,Lote Novilhas,Pasto 1,,,Animal de boa genética',
+      'BOV002,Touro Supremo,982000123456790,bovino,Angus,M,2020-01-10,touro,850,compra,Reprodutores,Pasto Central,,,Reprodutor principal da fazenda',
+      'BOV003,Bezerra Bella,982000123456791,bovino,Brahman,F,2024-05-20,bezerra,120,proprio,Lote Bezerras,Pasto 3,BOV002,BOV001,Filha de Touro Supremo',
+      'BOV004,Novilho Forte,982000123456792,bovino,Canchim,M,2023-08-12,novilho,450,leilao,Lote Engorda,Pasto 2,,,Adquirido em leilão',
       // Caprinos
-      'CAP001,Cabrita Luna,caprino,Boer,F,2023-01-15,cabrita,45,Lote Cabras,Pasto 4,,,Cabrita de alta produção',
-      'CAP002,Bode Alpha,caprino,Anglo Nubiana,M,2022-03-08,bode,75,Reprodutores Caprinos,Pasto 5,,,Reprodutor de elite',
-      'CAP003,Cabrito Veloz,caprino,Saanen,M,2024-06-10,cabrito,25,Lote Cabritos,Pasto 4,CAP002,CAP001,Filho de Alpha e Luna',
+      'CAP001,Cabrita Luna,982000123456793,caprino,Boer,F,2023-01-15,cabrita,45,doacao,Lote Cabras,Pasto 4,,,Cabrita de alta produção',
+      'CAP002,Bode Alpha,982000123456794,caprino,Anglo Nubiana,M,2022-03-08,bode,75,compra,Reprodutores Caprinos,Pasto 5,,,Reprodutor de elite',
+      'CAP003,Cabrito Veloz,982000123456795,caprino,Saanen,M,2024-06-10,cabrito,25,proprio,Lote Cabritos,Pasto 4,CAP002,CAP001,Filho de Alpha e Luna',
       // Ovinos
-      'OVI001,Ovelha Mansa,ovino,Santa Inês,F,2022-09-20,ovelha,55,Lote Ovelhas,Pasto 6,,,Matriz produtiva',
-      'OVI002,Carneiro Líder,ovino,Dorper,M,2021-12-05,carneiro,80,Reprodutores Ovinos,Pasto 7,,,Reprodutor importado',
-      'OVI003,Cordeira Doce,ovino,Morada Nova,F,2024-03-18,cordeira,30,Lote Cordeiros,Pasto 6,OVI002,OVI001,Primeira cria da estação',
+      'OVI001,Ovelha Mansa,982000123456796,ovino,Santa Inês,F,2022-09-20,ovelha,55,parceria,Lote Ovelhas,Pasto 6,,,Matriz produtiva',
+      'OVI002,Carneiro Líder,982000123456797,ovino,Dorper,M,2021-12-05,carneiro,80,leilao,Reprodutores Ovinos,Pasto 7,,,Reprodutor de leilão',
+      'OVI003,Cordeira Doce,982000123456798,ovino,Morada Nova,F,2024-03-18,cordeira,30,proprio,Lote Cordeiros,Pasto 6,OVI002,OVI001,Primeira cria da estação',
       // Equinos
-      'EQU001,Égua Veloz,equino,Quarto de Milha,F,2019-07-14,egua,480,Cavalos Trabalho,Piquete A,,,Égua de trabalho',
-      'EQU002,Garanhão Real,equino,Mangalarga,M,2018-04-22,garanhao,520,Reprodutores Equinos,Piquete B,,,Garanhão registrado',
-      'EQU003,Potra Estrela,equino,Crioulo,F,2023-11-30,potra,320,Potros Jovens,Piquete C,EQU002,EQU001,Potencial para competição',
+      'EQU001,Égua Veloz,982000123456799,equino,Quarto de Milha,F,2019-07-14,egua,480,compra,Cavalos Trabalho,Piquete A,,,Égua de trabalho',
+      'EQU002,Garanhão Real,982000123456800,equino,Mangalarga,M,2018-04-22,garanhao,520,leilao,Reprodutores Equinos,Piquete B,,,Garanhão de leilão',
+      'EQU003,Potra Estrela,982000123456801,equino,Crioulo,F,2023-11-30,potra,320,proprio,Potros Jovens,Piquete C,EQU002,EQU001,Potencial para competição',
       // Suínos
-      'SUI001,Porca Mãe,suino,Landrace,F,2022-02-28,porca,180,Maternidade,Baia 1,,,Matriz de alta prolificidade',
-      'SUI002,Cachaço Forte,suino,Duroc,M,2021-06-15,cachaço,220,Reprodutores Suínos,Baia 2,,,Reprodutor premium',
-      'SUI003,Leitão Rápido,suino,Large White,M,2024-04-08,leitao,35,Lote Crescimento,Baia 3,SUI002,SUI001,Leitão de crescimento rápido'
+      'SUI001,Porca Mãe,982000123456802,suino,Landrace,F,2022-02-28,porca,180,compra,Maternidade,Baia 1,,,Matriz de alta prolificidade',
+      'SUI002,Cachaço Forte,982000123456803,suino,Duroc,M,2021-06-15,cachaço,220,leilao,Reprodutores Suínos,Baia 2,,,Reprodutor de leilão',
+      'SUI003,Leitão Rápido,982000123456804,suino,Large White,M,2024-04-08,leitao,35,proprio,Lote Crescimento,Baia 3,SUI002,SUI001,Leitão de crescimento rápido'
     ].join('\n')
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -191,17 +195,27 @@ export function ImportarAnimais() {
     
     // Validações obrigatórias
     if (!animal.identificacao_unica) erros.push('Identificação única é obrigatória')
-    if (!animal.nome_registro) erros.push('Nome do registro é obrigatório')
     if (!animal.especie) erros.push('Espécie é obrigatória')
     if (!animal.sexo) erros.push('Sexo é obrigatório')
     if (!animal.data_nascimento) erros.push('Data de nascimento é obrigatória')
     if (!animal.categoria) erros.push('Categoria é obrigatória')
+    if (!animal.origem) erros.push('Origem é obrigatória')
     if (!animal.lote_atual) erros.push('Lote atual é obrigatório')
     if (!animal.pasto) erros.push('Pasto é obrigatório')
     
     // Validações de formato
     if (animal.sexo && !['M', 'F', 'Macho', 'Fêmea'].includes(animal.sexo)) {
       erros.push('Sexo deve ser M, F, Macho ou Fêmea')
+    }
+    
+    // Validar origem
+    if (animal.origem && !['proprio', 'compra', 'leilao', 'doacao', 'parceria'].includes(animal.origem)) {
+      erros.push('Origem deve ser: proprio, compra, leilao, doacao ou parceria')
+    }
+    
+    // Validar brinco eletrônico (somente números se fornecido)
+    if (animal.brinco_eletronico && !/^\d+$/.test(animal.brinco_eletronico)) {
+      erros.push('Brinco eletrônico deve conter apenas números')
     }
     
     // Validar espécie
@@ -251,13 +265,15 @@ export function ImportarAnimais() {
     return {
       linha,
       identificacao_unica: animal.identificacao_unica || '',
-      nome_registro: animal.nome_registro || '',
+      nome_registro: animal.nome_registro || undefined,
+      brinco_eletronico: animal.brinco_eletronico || undefined,
       especie: animal.especie || '',
       raca: animal.raca || '',
       sexo: animal.sexo || '',
       data_nascimento: animal.data_nascimento || '',
       categoria: animal.categoria || '',
       peso_atual: animal.peso_atual || '',
+      origem: animal.origem || '',
       lote_atual: animal.lote_atual || '',
       pasto: animal.pasto || '',
       pai: animal.pai || '',
@@ -397,13 +413,14 @@ export function ImportarAnimais() {
       // Adicionar animal usando o hook
       adicionarAnimal({
         identificacao_unica: animal.identificacao_unica,
-        nome_registro: animal.nome_registro,
+        nome_registro: animal.nome_registro || '',
         especie: animal.especie,
         raca: animal.raca,
         sexo: animal.sexo,
         data_nascimento: animal.data_nascimento,
         categoria: animal.categoria,
         peso_atual: animal.peso_atual ? parseFloat(animal.peso_atual) : undefined,
+        origem: animal.origem,
         lote_atual: animal.lote_atual,
         pasto: animal.pasto,
         pai: animal.pai,
@@ -574,10 +591,6 @@ export function ImportarAnimais() {
                                   <p className="text-gray-600 mt-1">Código único do animal (ex: BOV001, CAP002)</p>
                                 </div>
                                 <div className="p-3 bg-white rounded border-l-4 border-blue-400">
-                                  <strong className="text-blue-800">nome_registro:</strong>
-                                  <p className="text-gray-600 mt-1">Nome do animal</p>
-                                </div>
-                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
                                   <strong className="text-blue-800">especie:</strong>
                                   <p className="text-gray-600 mt-1">bovino, caprino, ovino, equino, suino</p>
                                 </div>
@@ -594,6 +607,10 @@ export function ImportarAnimais() {
                                   <p className="text-gray-600 mt-1">Varia por espécie (ver categorias ao lado)</p>
                                 </div>
                                 <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">origem:</strong>
+                                  <p className="text-gray-600 mt-1">proprio, compra, leilao, doacao, parceria</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
                                   <strong className="text-blue-800">lote_atual:</strong>
                                   <p className="text-gray-600 mt-1">Nome do lote onde o animal está</p>
                                 </div>
@@ -605,6 +622,14 @@ export function ImportarAnimais() {
                               
                               <h4 className="font-semibold text-blue-900 mt-6 mb-4 text-lg">Colunas Opcionais</h4>
                               <div className="space-y-3 text-sm">
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">nome_registro:</strong>
+                                  <span className="text-gray-600 ml-2">Nome do animal (opcional)</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">brinco_eletronico:</strong>
+                                  <span className="text-gray-600 ml-2">Número do brinco eletrônico (somente números)</span>
+                                </div>
                                 <div className="p-3 bg-blue-25 rounded border border-blue-200">
                                   <strong className="text-blue-700">raca:</strong>
                                   <span className="text-gray-600 ml-2">Raça do animal</span>
@@ -639,6 +664,18 @@ export function ImportarAnimais() {
                                 <div className="flex items-start gap-2">
                                   <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
                                   <span>Primeira linha deve ser o cabeçalho</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Nome do registro é opcional</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Brinco eletrônico deve conter apenas números</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Origem deve ser: proprio, compra, leilao, doacao ou parceria</span>
                                 </div>
                                 <div className="flex items-start gap-2">
                                   <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />

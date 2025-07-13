@@ -5,13 +5,15 @@ import { useState, useEffect } from 'react'
 export interface AnimalImportado {
   id: string
   identificacao_unica: string
-  nome_registro: string
+  nome_registro?: string
+  brinco_eletronico?: string
   especie: string
   raca?: string
   sexo: string
   data_nascimento: string
   categoria: string
   peso_atual?: number
+  origem: string
   lote_atual: string
   pasto: string
   pai?: string

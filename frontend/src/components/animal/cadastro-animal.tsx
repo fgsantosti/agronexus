@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,17 +17,19 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
+import { useEspeciesRacas } from '@/hooks/useEspeciesRacas'
+import { CATEGORIAS_POR_ESPECIE } from '@/types/animal'
 
 interface AnimalData {
   // Passo 1: Identificação
   identificacao_unica: string
   nome_registro: string
   brinco_eletronico?: string
-  chip?: string
   
   // Passo 2: Informações Básicas
   sexo: 'M' | 'F' | ''
   data_nascimento: Date | null
+  especie: string
   raca: string
   categoria: string
   
@@ -89,27 +91,20 @@ const STEPS = [
   }
 ]
 
-const RACAS = [
-  'Nelore', 'Angus', 'Brahman', 'Hereford', 'Simmental', 'Charolês', 
-  'Limousin', 'Senepol', 'Girolando', 'Guzerat', 'Indubrasil', 'Canchim'
-]
-
-const CATEGORIAS = [
-  'Bezerro', 'Bezerra', 'Novilho', 'Novilha', 'Touro', 'Vaca', 'Boi'
-]
-
 const CORES_PELAGEM = [
   'Branco', 'Preto', 'Marrom', 'Vermelho', 'Amarelo', 'Cinza', 'Malhado', 'Zebuíno'
 ]
 
 export function CadastroAnimal() {
   const router = useRouter()
+  const { especies, getRacasPorEspecie, loading } = useEspeciesRacas()
   const [currentStep, setCurrentStep] = useState(1)
   const [animalData, setAnimalData] = useState<AnimalData>({
     identificacao_unica: '',
     nome_registro: '',
     sexo: '',
     data_nascimento: null,
+    especie: '',
     raca: '',
     categoria: '',
     cor_pelagem: '',
@@ -121,18 +116,31 @@ export function CadastroAnimal() {
   })
 
   const updateAnimalData = (field: keyof AnimalData, value: any) => {
-    setAnimalData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    setAnimalData(prev => {
+      const newData = { ...prev, [field]: value }
+      
+      // Se mudou a espécie, limpa raça e categoria
+      if (field === 'especie') {
+        newData.raca = ''
+        newData.categoria = ''
+      }
+      
+      return newData
+    })
+  }
+
+  // Função para obter categorias da espécie selecionada
+  const getCategoriasPorEspecie = () => {
+    if (!animalData.especie) return []
+    return CATEGORIAS_POR_ESPECIE[animalData.especie as keyof typeof CATEGORIAS_POR_ESPECIE] || []
   }
 
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(animalData.identificacao_unica && animalData.nome_registro)
+        return !!(animalData.identificacao_unica)
       case 2:
-        return !!(animalData.sexo && animalData.data_nascimento && animalData.raca && animalData.categoria)
+        return !!(animalData.sexo && animalData.data_nascimento && animalData.especie && animalData.raca && animalData.categoria)
       case 3:
         return !!(animalData.cor_pelagem)
       case 4:
@@ -159,12 +167,39 @@ export function CadastroAnimal() {
   }
 
   const handleSubmit = async () => {
-    // Aqui você implementaria a lógica para salvar o animal
-    console.log('Dados do animal:', animalData)
-    
-    // Simular salvamento
-    alert('Animal cadastrado com sucesso!')
-    router.push('/rebanho')
+    try {
+      // Preparar dados para envio
+      const formData = {
+        ...animalData,
+        // Garantir que as datas estão no formato correto
+        data_nascimento: animalData.data_nascimento?.toISOString().split('T')[0],
+        data_entrada: animalData.data_entrada?.toISOString().split('T')[0],
+        // Converter IDs para objetos se necessário
+        especie: animalData.especie,
+        raca: animalData.raca
+      }
+
+      console.log('Dados do animal:', formData)
+      
+      // Aqui você implementaria a chamada para a API
+      const response = await fetch('/api/animais/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao cadastrar animal')
+      }
+
+      alert('Animal cadastrado com sucesso!')
+      router.push('/rebanho')
+    } catch (error) {
+      console.error('Erro ao cadastrar animal:', error)
+      alert('Erro ao cadastrar animal. Tente novamente.')
+    }
   }
 
   const handleCancel = () => {
@@ -233,6 +268,15 @@ export function CadastroAnimal() {
           <CardDescription>{STEPS[currentStep - 1].description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Carregando espécies e raças...</p>
+              </div>
+            </div>
+          ) : (
+            <>
           {currentStep === 1 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -245,7 +289,7 @@ export function CadastroAnimal() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="nome_registro">Nome do Registro *</Label>
+                <Label htmlFor="nome_registro">Nome do Registro</Label>
                 <Input
                   id="nome_registro"
                   placeholder="Ex: Estrela da Manhã"
@@ -253,22 +297,20 @@ export function CadastroAnimal() {
                   onChange={(e) => updateAnimalData('nome_registro', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="brinco_eletronico">Brinco Eletrônico</Label>
                 <Input
                   id="brinco_eletronico"
+                  type="number"
                   placeholder="Ex: 982000123456789"
                   value={animalData.brinco_eletronico || ''}
                   onChange={(e) => updateAnimalData('brinco_eletronico', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="chip">Chip</Label>
-                <Input
-                  id="chip"
-                  placeholder="Ex: 982000123456789"
-                  value={animalData.chip || ''}
-                  onChange={(e) => updateAnimalData('chip', e.target.value)}
+                  onKeyDown={(e) => {
+                    // Permitir apenas números, backspace, delete, tab, escape, enter, home, end, left, right
+                    if (!/[\d]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                      e.preventDefault()
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -323,29 +365,50 @@ export function CadastroAnimal() {
                 </Popover>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="raca">Raça *</Label>
-                  <Select value={animalData.raca} onValueChange={(value) => updateAnimalData('raca', value)}>
+                  <Label htmlFor="especie">Espécie *</Label>
+                  <Select value={animalData.especie} onValueChange={(value) => updateAnimalData('especie', value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a raça" />
+                      <SelectValue placeholder="Selecione a espécie" />
                     </SelectTrigger>
                     <SelectContent>
-                      {RACAS.map((raca) => (
-                        <SelectItem key={raca} value={raca}>{raca}</SelectItem>
+                      {especies.map((especie) => (
+                        <SelectItem key={especie.id} value={especie.nome}>{especie.nome_display}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="raca">Raça *</Label>
+                  <Select 
+                    value={animalData.raca} 
+                    onValueChange={(value) => updateAnimalData('raca', value)}
+                    disabled={!animalData.especie}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={animalData.especie ? "Selecione a raça" : "Selecione a espécie primeiro"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getRacasPorEspecie(animalData.especie).map((raca) => (
+                        <SelectItem key={raca.id} value={raca.id}>{raca.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="categoria">Categoria *</Label>
-                  <Select value={animalData.categoria} onValueChange={(value) => updateAnimalData('categoria', value)}>
+                  <Select 
+                    value={animalData.categoria} 
+                    onValueChange={(value) => updateAnimalData('categoria', value)}
+                    disabled={!animalData.especie}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a categoria" />
+                      <SelectValue placeholder={animalData.especie ? "Selecione a categoria" : "Selecione a espécie primeiro"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIAS.map((categoria) => (
-                        <SelectItem key={categoria} value={categoria}>{categoria}</SelectItem>
+                      {getCategoriasPorEspecie().map((categoria) => (
+                        <SelectItem key={categoria.value} value={categoria.value}>{categoria.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -416,6 +479,7 @@ export function CadastroAnimal() {
                   <SelectContent>
                     <SelectItem value="proprio">Próprio</SelectItem>
                     <SelectItem value="compra">Compra</SelectItem>
+                    <SelectItem value="leilao">Leilão</SelectItem>
                     <SelectItem value="doacao">Doação</SelectItem>
                     <SelectItem value="parceria">Parceria</SelectItem>
                   </SelectContent>
@@ -553,13 +617,16 @@ export function CadastroAnimal() {
               <div className="mt-6 p-4 bg-muted rounded-lg">
                 <h4 className="font-medium mb-2">Resumo dos Dados</h4>
                 <div className="text-sm space-y-1">
-                  <p><span className="font-medium">Identificação:</span> {animalData.identificacao_unica} - {animalData.nome_registro}</p>
-                  <p><span className="font-medium">Animal:</span> {animalData.sexo === 'M' ? 'Macho' : 'Fêmea'} - {animalData.raca} - {animalData.categoria}</p>
+                  <p><span className="font-medium">Identificação:</span> {animalData.identificacao_unica}{animalData.nome_registro ? ` - ${animalData.nome_registro}` : ''}</p>
+                  <p><span className="font-medium">Espécie:</span> {especies.find(e => e.nome === animalData.especie)?.nome_display || animalData.especie}</p>
+                  <p><span className="font-medium">Animal:</span> {animalData.sexo === 'M' ? 'Macho' : 'Fêmea'} - {getRacasPorEspecie(animalData.especie).find(r => r.id === animalData.raca)?.nome || animalData.raca} - {getCategoriasPorEspecie().find(c => c.value === animalData.categoria)?.label || animalData.categoria}</p>
                   <p><span className="font-medium">Localização:</span> {animalData.lote_atual} - {animalData.pasto}</p>
                   {animalData.peso_atual && <p><span className="font-medium">Peso:</span> {animalData.peso_atual} kg</p>}
                 </div>
               </div>
             </div>
+          )}
+            </>
           )}
         </CardContent>
       </Card>

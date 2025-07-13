@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { FullscreenDialog, FullscreenDialogContent, FullscreenDialogDescription, FullscreenDialogHeader, FullscreenDialogTitle, FullscreenDialogTrigger, FullscreenDialogBody } from "@/components/ui/fullscreen-dialog"
 import { 
   Upload, 
   Download, 
@@ -17,22 +19,30 @@ import {
   ArrowLeft,
   Eye,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Info,
+  HelpCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { useAnimaisImportados } from '@/hooks/useAnimaisImportados'
 
 interface AnimalImportacao {
   linha: number
   identificacao_unica: string
-  nome_registro: string
+  nome_registro?: string
+  brinco_eletronico?: string
+  especie: string
+  raca: string
   sexo: string
   data_nascimento: string
-  raca: string
   categoria: string
   peso_atual?: string
+  origem: string
   lote_atual: string
   pasto: string
+  pai?: string
+  mae?: string
   observacoes?: string
   status: 'valido' | 'erro' | 'aviso'
   erros: string[]
@@ -48,27 +58,86 @@ interface ResultadoImportacao {
 const TEMPLATE_HEADERS = [
   'identificacao_unica',
   'nome_registro', 
+  'brinco_eletronico',
+  'especie',
+  'raca',
   'sexo',
   'data_nascimento',
-  'raca',
   'categoria',
   'peso_atual',
+  'origem',
   'lote_atual',
   'pasto',
+  'pai',
+  'mae',
   'observacoes'
 ]
 
-const RACAS_VALIDAS = [
-  'Nelore', 'Angus', 'Brahman', 'Hereford', 'Simmental', 'Charolês', 
-  'Limousin', 'Senepol', 'Girolando', 'Guzerat', 'Indubrasil', 'Canchim'
-]
+// Espécies e suas respectivas raças e categorias
+const ESPECIES_RACAS_CATEGORIAS = {
+  bovino: {
+    nome_display: 'Bovino',
+    racas: ['Nelore', 'Angus', 'Brahman', 'Hereford', 'Simmental', 'Charolês', 'Limousin', 'Senepol', 'Girolando', 'Guzerat', 'Indubrasil', 'Canchim'],
+    categorias: [
+      { codigo: 'bezerro', nome: 'Bezerro' },
+      { codigo: 'bezerra', nome: 'Bezerra' },
+      { codigo: 'novilho', nome: 'Novilho' },
+      { codigo: 'novilha', nome: 'Novilha' },
+      { codigo: 'touro', nome: 'Touro' },
+      { codigo: 'vaca', nome: 'Vaca' }
+    ]
+  },
+  caprino: {
+    nome_display: 'Caprino',
+    racas: ['Boer', 'Anglo Nubiana', 'Saanen', 'Toggenburg', 'Parda Alpina', 'Canindé', 'Moxotó', 'Repartida'],
+    categorias: [
+      { codigo: 'cabrito', nome: 'Cabrito' },
+      { codigo: 'cabrita', nome: 'Cabrita' },
+      { codigo: 'bode_jovem', nome: 'Bode Jovem' },
+      { codigo: 'cabra_jovem', nome: 'Cabra Jovem' },
+      { codigo: 'bode', nome: 'Bode' },
+      { codigo: 'cabra', nome: 'Cabra' }
+    ]
+  },
+  ovino: {
+    nome_display: 'Ovino',
+    racas: ['Santa Inês', 'Dorper', 'Morada Nova', 'Katahdin', 'Somalis Brasileira', 'Cariri', 'Rabo Largo'],
+    categorias: [
+      { codigo: 'cordeiro', nome: 'Cordeiro' },
+      { codigo: 'cordeira', nome: 'Cordeira' },
+      { codigo: 'carneiro_jovem', nome: 'Carneiro Jovem' },
+      { codigo: 'ovelha_jovem', nome: 'Ovelha Jovem' },
+      { codigo: 'carneiro', nome: 'Carneiro' },
+      { codigo: 'ovelha', nome: 'Ovelha' }
+    ]
+  },
+  equino: {
+    nome_display: 'Equino',
+    racas: ['Quarto de Milha', 'Mangalarga', 'Crioulo', 'Árabe', 'Campolina', 'Lusitano'],
+    categorias: [
+      { codigo: 'potro', nome: 'Potro' },
+      { codigo: 'potra', nome: 'Potra' },
+      { codigo: 'garanhao', nome: 'Garanhão' },
+      { codigo: 'egua', nome: 'Égua' }
+    ]
+  },
+  suino: {
+    nome_display: 'Suíno',
+    racas: ['Landrace', 'Large White', 'Duroc', 'Pietrain', 'Hampshire', 'Piau'],
+    categorias: [
+      { codigo: 'leitao', nome: 'Leitão' },
+      { codigo: 'leitoa', nome: 'Leitoa' },
+      { codigo: 'cachaço', nome: 'Cachaço' },
+      { codigo: 'porca', nome: 'Porca' }
+    ]
+  }
+}
 
-const CATEGORIAS_VALIDAS = [
-  'Bezerro', 'Bezerra', 'Novilho', 'Novilha', 'Touro', 'Vaca', 'Boi'
-]
+const ESPECIES_VALIDAS = Object.keys(ESPECIES_RACAS_CATEGORIAS)
 
 export function ImportarAnimais() {
   const router = useRouter()
+  const { adicionarAnimal } = useAnimaisImportados()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [etapa, setEtapa] = useState<'upload' | 'validacao' | 'processamento' | 'concluido'>('upload')
   const [arquivo, setArquivo] = useState<File | null>(null)
@@ -81,12 +150,34 @@ export function ImportarAnimais() {
   })
   const [progresso, setProgresso] = useState(0)
   const [processando, setProcessando] = useState(false)
+  const [previewData, setPreviewData] = useState<string[][]>([])
+  const [showPreview, setShowPreview] = useState(false)
 
   const baixarTemplate = () => {
     const csvContent = [
+      // Cabeçalho
       TEMPLATE_HEADERS.join(','),
-      'BR001,Estrela da Manhã,F,2022-03-15,Nelore,Novilha,380,Lote A,Pasto 1,Animal em boa condição',
-      'BR002,Touro Rex,M,2021-01-10,Angus,Touro,750,Reprodutor,Pasto 2,Reprodutor principal'
+      // Bovinos
+      'BOV001,Estrela da Manhã,982000123456789,bovino,Nelore,F,2022-03-15,novilha,380,proprio,Lote Novilhas,Pasto 1,,,Animal de boa genética',
+      'BOV002,Touro Supremo,982000123456790,bovino,Angus,M,2020-01-10,touro,850,compra,Reprodutores,Pasto Central,,,Reprodutor principal da fazenda',
+      'BOV003,Bezerra Bella,982000123456791,bovino,Brahman,F,2024-05-20,bezerra,120,proprio,Lote Bezerras,Pasto 3,BOV002,BOV001,Filha de Touro Supremo',
+      'BOV004,Novilho Forte,982000123456792,bovino,Canchim,M,2023-08-12,novilho,450,leilao,Lote Engorda,Pasto 2,,,Adquirido em leilão',
+      // Caprinos
+      'CAP001,Cabrita Luna,982000123456793,caprino,Boer,F,2023-01-15,cabrita,45,doacao,Lote Cabras,Pasto 4,,,Cabrita de alta produção',
+      'CAP002,Bode Alpha,982000123456794,caprino,Anglo Nubiana,M,2022-03-08,bode,75,compra,Reprodutores Caprinos,Pasto 5,,,Reprodutor de elite',
+      'CAP003,Cabrito Veloz,982000123456795,caprino,Saanen,M,2024-06-10,cabrito,25,proprio,Lote Cabritos,Pasto 4,CAP002,CAP001,Filho de Alpha e Luna',
+      // Ovinos
+      'OVI001,Ovelha Mansa,982000123456796,ovino,Santa Inês,F,2022-09-20,ovelha,55,parceria,Lote Ovelhas,Pasto 6,,,Matriz produtiva',
+      'OVI002,Carneiro Líder,982000123456797,ovino,Dorper,M,2021-12-05,carneiro,80,leilao,Reprodutores Ovinos,Pasto 7,,,Reprodutor de leilão',
+      'OVI003,Cordeira Doce,982000123456798,ovino,Morada Nova,F,2024-03-18,cordeira,30,proprio,Lote Cordeiros,Pasto 6,OVI002,OVI001,Primeira cria da estação',
+      // Equinos
+      'EQU001,Égua Veloz,982000123456799,equino,Quarto de Milha,F,2019-07-14,egua,480,compra,Cavalos Trabalho,Piquete A,,,Égua de trabalho',
+      'EQU002,Garanhão Real,982000123456800,equino,Mangalarga,M,2018-04-22,garanhao,520,leilao,Reprodutores Equinos,Piquete B,,,Garanhão de leilão',
+      'EQU003,Potra Estrela,982000123456801,equino,Crioulo,F,2023-11-30,potra,320,proprio,Potros Jovens,Piquete C,EQU002,EQU001,Potencial para competição',
+      // Suínos
+      'SUI001,Porca Mãe,982000123456802,suino,Landrace,F,2022-02-28,porca,180,compra,Maternidade,Baia 1,,,Matriz de alta prolificidade',
+      'SUI002,Cachaço Forte,982000123456803,suino,Duroc,M,2021-06-15,cachaço,220,leilao,Reprodutores Suínos,Baia 2,,,Reprodutor de leilão',
+      'SUI003,Leitão Rápido,982000123456804,suino,Large White,M,2024-04-08,leitao,35,proprio,Lote Crescimento,Baia 3,SUI002,SUI001,Leitão de crescimento rápido'
     ].join('\n')
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -104,11 +195,11 @@ export function ImportarAnimais() {
     
     // Validações obrigatórias
     if (!animal.identificacao_unica) erros.push('Identificação única é obrigatória')
-    if (!animal.nome_registro) erros.push('Nome do registro é obrigatório')
+    if (!animal.especie) erros.push('Espécie é obrigatória')
     if (!animal.sexo) erros.push('Sexo é obrigatório')
     if (!animal.data_nascimento) erros.push('Data de nascimento é obrigatória')
-    if (!animal.raca) erros.push('Raça é obrigatória')
     if (!animal.categoria) erros.push('Categoria é obrigatória')
+    if (!animal.origem) erros.push('Origem é obrigatória')
     if (!animal.lote_atual) erros.push('Lote atual é obrigatório')
     if (!animal.pasto) erros.push('Pasto é obrigatório')
     
@@ -117,12 +208,41 @@ export function ImportarAnimais() {
       erros.push('Sexo deve ser M, F, Macho ou Fêmea')
     }
     
-    if (animal.raca && !RACAS_VALIDAS.includes(animal.raca)) {
-      erros.push(`Raça inválida. Raças válidas: ${RACAS_VALIDAS.join(', ')}`)
+    // Validar origem
+    if (animal.origem && !['proprio', 'compra', 'leilao', 'doacao', 'parceria'].includes(animal.origem)) {
+      erros.push('Origem deve ser: proprio, compra, leilao, doacao ou parceria')
     }
     
-    if (animal.categoria && !CATEGORIAS_VALIDAS.includes(animal.categoria)) {
-      erros.push(`Categoria inválida. Categorias válidas: ${CATEGORIAS_VALIDAS.join(', ')}`)
+    // Validar brinco eletrônico (somente números se fornecido)
+    if (animal.brinco_eletronico && !/^\d+$/.test(animal.brinco_eletronico)) {
+      erros.push('Brinco eletrônico deve conter apenas números')
+    }
+    
+    // Validar espécie
+    if (animal.especie && !ESPECIES_VALIDAS.includes(animal.especie)) {
+      erros.push(`Espécie inválida. Espécies válidas: ${ESPECIES_VALIDAS.join(', ')}`)
+    }
+    
+    // Validar raça por espécie
+    if (animal.especie && animal.raca) {
+      const especieData = ESPECIES_RACAS_CATEGORIAS[animal.especie as keyof typeof ESPECIES_RACAS_CATEGORIAS]
+      if (especieData && !especieData.racas.includes(animal.raca)) {
+        erros.push(`Raça "${animal.raca}" não é válida para ${especieData.nome_display}. Raças válidas: ${especieData.racas.join(', ')}`)
+      }
+    }
+    
+    // Validar categoria por espécie
+    if (animal.especie && animal.categoria) {
+      const especieData = ESPECIES_RACAS_CATEGORIAS[animal.especie as keyof typeof ESPECIES_RACAS_CATEGORIAS]
+      if (especieData) {
+        const categoriaValida = especieData.categorias.some(cat => 
+          cat.codigo === animal.categoria || cat.nome === animal.categoria
+        )
+        if (!categoriaValida) {
+          const categoriasDisponiveis = especieData.categorias.map(cat => `${cat.nome} (${cat.codigo})`).join(', ')
+          erros.push(`Categoria "${animal.categoria}" não é válida para ${especieData.nome_display}. Categorias válidas: ${categoriasDisponiveis}`)
+        }
+      }
     }
     
     // Validar data
@@ -130,6 +250,8 @@ export function ImportarAnimais() {
       const data = new Date(animal.data_nascimento)
       if (isNaN(data.getTime())) {
         erros.push('Data de nascimento inválida (use formato YYYY-MM-DD)')
+      } else if (data > new Date()) {
+        erros.push('Data de nascimento não pode ser futura')
       }
     }
     
@@ -143,14 +265,19 @@ export function ImportarAnimais() {
     return {
       linha,
       identificacao_unica: animal.identificacao_unica || '',
-      nome_registro: animal.nome_registro || '',
+      nome_registro: animal.nome_registro || undefined,
+      brinco_eletronico: animal.brinco_eletronico || undefined,
+      especie: animal.especie || '',
+      raca: animal.raca || '',
       sexo: animal.sexo || '',
       data_nascimento: animal.data_nascimento || '',
-      raca: animal.raca || '',
       categoria: animal.categoria || '',
       peso_atual: animal.peso_atual || '',
+      origem: animal.origem || '',
       lote_atual: animal.lote_atual || '',
       pasto: animal.pasto || '',
+      pai: animal.pai || '',
+      mae: animal.mae || '',
       observacoes: animal.observacoes || '',
       status,
       erros
@@ -163,27 +290,29 @@ export function ImportarAnimais() {
     
     const text = await arquivo.text()
     const linhas = text.split('\n')
-    const headers = linhas[0].split(',').map(h => h.trim())
     
+    // Primeira linha é o cabeçalho
+    const headers = linhas[0].split(',').map(h => h.trim())
     const animaisProcessados: AnimalImportacao[] = []
     
-    for (let i = 1; i < linhas.length; i++) {
-      if (linhas[i].trim()) {
-        const valores = linhas[i].split(',').map(v => v.trim())
-        const animal: any = {}
-        
-        headers.forEach((header, index) => {
-          animal[header] = valores[index] || ''
-        })
-        
-        const animalValidado = validarAnimal(animal, i + 1)
-        animaisProcessados.push(animalValidado)
-        
-        setProgresso((i / (linhas.length - 1)) * 100)
-        
-        // Simular processamento
-        await new Promise(resolve => setTimeout(resolve, 10))
-      }
+    // Processar linhas de dados (excluindo cabeçalho e linhas vazias)
+    const linhasDados = linhas.slice(1).filter(linha => linha.trim())
+    
+    for (let i = 0; i < linhasDados.length; i++) {
+      const valores = linhasDados[i].split(',').map(v => v.trim())
+      const animal: any = {}
+      
+      headers.forEach((header, index) => {
+        animal[header] = valores[index] || ''
+      })
+      
+      const animalValidado = validarAnimal(animal, i + 2) // +2 para ajustar numeração (linha 1 = cabeçalho)
+      animaisProcessados.push(animalValidado)
+      
+      setProgresso(((i + 1) / linhasDados.length) * 100)
+      
+      // Simular processamento
+      await new Promise(resolve => setTimeout(resolve, 10))
     }
     
     setAnimais(animaisProcessados)
@@ -203,8 +332,71 @@ export function ImportarAnimais() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      // Validar tamanho do arquivo (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Arquivo muito grande! O tamanho máximo é 5MB.')
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+        return
+      }
+
+      // Validar tipo do arquivo
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Formato de arquivo inválido! Apenas arquivos CSV são aceitos.')
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+        return
+      }
+
       setArquivo(file)
-      processarArquivo(file)
+      
+      // Ler arquivo para preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const text = e.target?.result as string
+        const linhas = text.split('\n')
+        
+        // Validar se tem dados suficientes
+        const linhasComDados = linhas.filter(linha => linha.trim())
+        if (linhasComDados.length < 2) {
+          alert('Arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados.')
+          setArquivo(null)
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
+          return
+        }
+
+        // Primeira linha é o cabeçalho
+        const headers = linhas[0].split(',')
+        const dadosPreview = linhas
+          .slice(1)
+          .filter(linha => linha.trim())
+          .slice(0, 5) // Mostrar apenas 5 linhas
+          .map(linha => linha.split(','))
+        
+        setPreviewData([headers, ...dadosPreview])
+        setShowPreview(true)
+      }
+      
+      reader.onerror = () => {
+        alert('Erro ao ler o arquivo. Tente novamente.')
+        setArquivo(null)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      }
+      
+      reader.readAsText(file)
+    }
+  }
+
+  const confirmarProcessamento = () => {
+    setShowPreview(false)
+    if (arquivo) {
+      processarArquivo(arquivo)
     }
   }
 
@@ -214,10 +406,32 @@ export function ImportarAnimais() {
     
     const animaisValidos = animais.filter(a => a.status === 'valido')
     
-    // Simular importação
+    // Importar usando o hook
     for (let i = 0; i < animaisValidos.length; i++) {
+      const animal = animaisValidos[i]
+      
+      // Adicionar animal usando o hook
+      adicionarAnimal({
+        identificacao_unica: animal.identificacao_unica,
+        nome_registro: animal.nome_registro || '',
+        especie: animal.especie,
+        raca: animal.raca,
+        sexo: animal.sexo,
+        data_nascimento: animal.data_nascimento,
+        categoria: animal.categoria,
+        peso_atual: animal.peso_atual ? parseFloat(animal.peso_atual) : undefined,
+        origem: animal.origem,
+        lote_atual: animal.lote_atual,
+        pasto: animal.pasto,
+        pai: animal.pai,
+        mae: animal.mae,
+        observacoes: animal.observacoes,
+        status: 'ativo',
+        importado: true
+      })
+      
       setProgresso(((i + 1) / animaisValidos.length) * 100)
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 50))
     }
     
     setEtapa('concluido')
@@ -230,6 +444,8 @@ export function ImportarAnimais() {
     setResultado({ total: 0, validos: 0, erros: 0, avisos: 0 })
     setProgresso(0)
     setProcessando(false)
+    setPreviewData([])
+    setShowPreview(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -336,23 +552,200 @@ export function ImportarAnimais() {
                 Selecione um arquivo CSV com os dados dos animais
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Button onClick={baixarTemplate} variant="outline">
+            <CardContent className="space-y-6">
+              {/* Ações principais */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <Button onClick={baixarTemplate} variant="outline" size="lg">
                   <Download className="w-4 h-4 mr-2" />
                   Baixar Template
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  Baixe o template para ver o formato correto
-                </span>
+                
+                <FullscreenDialog>
+                  <FullscreenDialogTrigger asChild>
+                    <Button variant="outline" size="lg">
+                      <HelpCircle className="w-4 h-4 mr-2" />
+                      Ver Guia de Importação
+                    </Button>
+                  </FullscreenDialogTrigger>
+                  <FullscreenDialogContent>
+                    <FullscreenDialogHeader>
+                      <FullscreenDialogTitle>Guia de Importação de Animais</FullscreenDialogTitle>
+                      <FullscreenDialogDescription>
+                        Informações detalhadas sobre como preparar seu arquivo CSV para importação
+                      </FullscreenDialogDescription>
+                    </FullscreenDialogHeader>
+                    
+                    <FullscreenDialogBody>
+                      <div className="max-w-7xl mx-auto p-6">
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                          {/* Colunas do Template */}
+                          <div className="space-y-6">
+                            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                              <h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2 text-lg">
+                                <FileSpreadsheet className="w-5 h-5" />
+                                Colunas Obrigatórias
+                              </h3>
+                              <div className="space-y-3 text-sm">
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">identificacao_unica:</strong>
+                                  <p className="text-gray-600 mt-1">Código único do animal (ex: BOV001, CAP002)</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">especie:</strong>
+                                  <p className="text-gray-600 mt-1">bovino, caprino, ovino, equino, suino</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">sexo:</strong>
+                                  <p className="text-gray-600 mt-1">M (Macho) ou F (Fêmea)</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">data_nascimento:</strong>
+                                  <p className="text-gray-600 mt-1">Formato: YYYY-MM-DD (ex: 2024-01-15)</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">categoria:</strong>
+                                  <p className="text-gray-600 mt-1">Varia por espécie (ver categorias ao lado)</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">origem:</strong>
+                                  <p className="text-gray-600 mt-1">proprio, compra, leilao, doacao, parceria</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">lote_atual:</strong>
+                                  <p className="text-gray-600 mt-1">Nome do lote onde o animal está</p>
+                                </div>
+                                <div className="p-3 bg-white rounded border-l-4 border-blue-400">
+                                  <strong className="text-blue-800">pasto:</strong>
+                                  <p className="text-gray-600 mt-1">Nome do pasto/área onde o animal está</p>
+                                </div>
+                              </div>
+                              
+                              <h4 className="font-semibold text-blue-900 mt-6 mb-4 text-lg">Colunas Opcionais</h4>
+                              <div className="space-y-3 text-sm">
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">nome_registro:</strong>
+                                  <span className="text-gray-600 ml-2">Nome do animal (opcional)</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">brinco_eletronico:</strong>
+                                  <span className="text-gray-600 ml-2">Número do brinco eletrônico (somente números)</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">raca:</strong>
+                                  <span className="text-gray-600 ml-2">Raça do animal</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">peso_atual:</strong>
+                                  <span className="text-gray-600 ml-2">Peso em kg (somente números)</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">pai:</strong>
+                                  <span className="text-gray-600 ml-2">ID do reprodutor pai</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">mae:</strong>
+                                  <span className="text-gray-600 ml-2">ID da matriz mãe</span>
+                                </div>
+                                <div className="p-3 bg-blue-25 rounded border border-blue-200">
+                                  <strong className="text-blue-700">observacoes:</strong>
+                                  <span className="text-gray-600 ml-2">Informações adicionais</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Dicas importantes */}
+                            <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+                              <h3 className="font-semibold text-green-900 mb-4 text-lg">💡 Dicas Importantes</h3>
+                              <div className="space-y-3 text-sm text-green-800">
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Use o template baixado como base</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Primeira linha deve ser o cabeçalho</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Nome do registro é opcional</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Brinco eletrônico deve conter apenas números</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Origem deve ser: proprio, compra, leilao, doacao ou parceria</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Datas devem estar no formato YYYY-MM-DD</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Pesos devem ser números (sem vírgulas)</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>IDs de pai/mãe devem existir na planilha</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                                  <span>Máximo de 1000 animais por importação</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Categorias por espécie */}
+                          <div className="xl:col-span-2">
+                            <div className="bg-amber-50 p-6 rounded-lg border border-amber-200 h-fit">
+                              <h3 className="font-semibold text-amber-900 mb-6 flex items-center gap-2 text-lg">
+                                <Badge className="w-5 h-5" />
+                                Categorias por Espécie
+                              </h3>
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {Object.entries(ESPECIES_RACAS_CATEGORIAS).map(([especie, dados]) => (
+                                  <div key={especie} className="bg-white p-4 rounded-lg border border-amber-200">
+                                    <div className="font-bold text-amber-800 mb-3 text-lg">{dados.nome_display}</div>
+                                    
+                                    <div className="mb-4">
+                                      <h5 className="font-semibold text-amber-700 mb-2">Categorias:</h5>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {dados.categorias.map(cat => (
+                                          <div key={cat.codigo} className="text-sm bg-amber-50 px-2 py-1 rounded">
+                                            <strong>{cat.nome}</strong>
+                                            <div className="text-xs text-amber-600">({cat.codigo})</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    
+                                    <div>
+                                      <h5 className="font-semibold text-amber-700 mb-2">Raças disponíveis:</h5>
+                                      <div className="text-xs text-amber-600 leading-relaxed">
+                                        {dados.racas.join(' • ')}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </FullscreenDialogBody>
+                  </FullscreenDialogContent>
+                </FullscreenDialog>
               </div>
 
+              {/* Area de upload simplificada */}
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
                 <FileSpreadsheet className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <div className="space-y-2">
                   <p className="text-lg font-medium">Arraste o arquivo aqui ou clique para selecionar</p>
                   <p className="text-sm text-muted-foreground">
-                    Suporte para arquivos CSV (máximo 1000 animais)
+                    Arquivo CSV (máximo 1000 animais e 5MB)
                   </p>
                 </div>
                 <input
@@ -366,6 +759,7 @@ export function ImportarAnimais() {
                   className="mt-4"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={processando}
+                  size="lg"
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   {processando ? 'Processando...' : 'Selecionar Arquivo'}
@@ -380,6 +774,66 @@ export function ImportarAnimais() {
                   </div>
                   <Progress value={progresso} className="w-full" />
                 </div>
+              )}
+
+              {/* Preview do arquivo */}
+              {showPreview && previewData.length > 0 && (
+                <Card className="border-2 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Eye className="w-4 h-4" />
+                      Preview do Arquivo
+                    </CardTitle>
+                    <CardDescription>
+                      Visualize os primeiros registros antes de processar
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto mb-4">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            {previewData[0]?.map((header, index) => (
+                              <TableHead key={index} className="min-w-[120px]">
+                                {header.trim()}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {previewData.slice(1).map((row, rowIndex) => (
+                            <TableRow key={rowIndex}>
+                              {row.map((cell, cellIndex) => (
+                                <TableCell key={cellIndex} className="text-sm">
+                                  {cell.trim() || '-'}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setShowPreview(false)
+                          setArquivo(null)
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = ''
+                          }
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button onClick={confirmarProcessamento}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Processar Arquivo
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </CardContent>
           </Card>
@@ -458,8 +912,9 @@ export function ImportarAnimais() {
                         <TableHead>Linha</TableHead>
                         <TableHead>Identificação</TableHead>
                         <TableHead>Nome</TableHead>
-                        <TableHead>Sexo</TableHead>
+                        <TableHead>Espécie</TableHead>
                         <TableHead>Raça</TableHead>
+                        <TableHead>Sexo</TableHead>
                         <TableHead>Categoria</TableHead>
                         <TableHead>Lote</TableHead>
                         <TableHead>Erros</TableHead>
@@ -480,8 +935,13 @@ export function ImportarAnimais() {
                           <TableCell>{animal.linha}</TableCell>
                           <TableCell>{animal.identificacao_unica}</TableCell>
                           <TableCell>{animal.nome_registro}</TableCell>
-                          <TableCell>{animal.sexo}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {ESPECIES_RACAS_CATEGORIAS[animal.especie as keyof typeof ESPECIES_RACAS_CATEGORIAS]?.nome_display || animal.especie}
+                            </Badge>
+                          </TableCell>
                           <TableCell>{animal.raca}</TableCell>
+                          <TableCell>{animal.sexo}</TableCell>
                           <TableCell>{animal.categoria}</TableCell>
                           <TableCell>{animal.lote_atual}</TableCell>
                           <TableCell>

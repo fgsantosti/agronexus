@@ -17,10 +17,10 @@ from rest_framework.response import Response
 from ...models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
                        CalendarioSanitario, CategoriaFinanceira,
                        ConfiguracaoSistema, ContaFinanceira,
-                       DiagnosticoGestacao, EstacaoMonta, HistoricoLoteAnimal,
+                       DiagnosticoGestacao, EspecieAnimal, EstacaoMonta, HistoricoLoteAnimal,
                        HistoricoOcupacaoArea, Inseminacao,
                        LancamentoFinanceiro, Lote, Manejo, Medicamento, Parto,
-                       Pesagem, Propriedade, ProtocoloIATF,
+                       Pesagem, Propriedade, ProtocoloIATF, RacaAnimal,
                        RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
 from ...permissions.base import IsOwnerOrReadOnly, PropriedadeOwnerPermission
 from ...utils.filters import (AnimalFilter, AreaFilter,
@@ -36,6 +36,7 @@ from .serializers import (AdministracaoMedicamentoSerializer, AnimalSerializer,
                           ConfiguracaoSistemaSerializer,
                           ContaFinanceiraSerializer,
                           DiagnosticoGestacaoSerializer,
+                          EspecieAnimalSerializer,
                           EstacaoMontaSerializer,
                           HistoricoLoteAnimalSerializer,
                           HistoricoOcupacaoAreaSerializer,
@@ -44,6 +45,7 @@ from .serializers import (AdministracaoMedicamentoSerializer, AnimalSerializer,
                           ManejoSerializer, MedicamentoSerializer,
                           PartoSerializer, PesagemSerializer,
                           PropriedadeSerializer, ProtocoloIATFSerializer,
+                          RacaAnimalSerializer,
                           RelatorioPersonalizadoSerializer, UsuarioSerializer,
                           VacinacaoSerializer, VacinaSerializer)
 
@@ -286,6 +288,48 @@ class AreaViewSet(BaseViewSet):
         area.save()
 
         return Response({'message': 'Área liberada com sucesso'})
+
+
+# ============================================================================
+# VIEWSETS DE ESPÉCIES E RAÇAS
+# ============================================================================
+
+class EspecieAnimalViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet para espécies de animais (apenas leitura)"""
+    queryset = EspecieAnimal.objects.filter(ativo=True)
+    serializer_class = EspecieAnimalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['nome', 'nome_display']
+    ordering_fields = ['nome', 'nome_display']
+    ordering = ['nome']
+
+    @action(detail=True, methods=['get'])
+    def racas(self, request, pk=None):
+        """Retorna todas as raças de uma espécie"""
+        especie = self.get_object()
+        racas = especie.racas.filter(ativo=True)
+        serializer = RacaAnimalSerializer(racas, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def categorias(self, request, pk=None):
+        """Retorna as categorias disponíveis para uma espécie"""
+        especie = self.get_object()
+        categorias = especie.get_categorias()
+        return Response(categorias)
+
+
+class RacaAnimalViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet para raças de animais (apenas leitura)"""
+    queryset = RacaAnimal.objects.filter(ativo=True)
+    serializer_class = RacaAnimalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['especie']
+    search_fields = ['nome', 'origem']
+    ordering_fields = ['nome', 'especie__nome']
+    ordering = ['especie__nome', 'nome']
 
 
 # ============================================================================

@@ -15,10 +15,10 @@ from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 from ...models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
                        CalendarioSanitario, CategoriaFinanceira,
                        ConfiguracaoSistema, ContaFinanceira,
-                       DiagnosticoGestacao, EstacaoMonta, HistoricoLoteAnimal,
+                       DiagnosticoGestacao, EspecieAnimal, EstacaoMonta, HistoricoLoteAnimal,
                        HistoricoOcupacaoArea, Inseminacao,
                        LancamentoFinanceiro, Lote, Manejo, Medicamento, Parto,
-                       Pesagem, Propriedade, ProtocoloIATF,
+                       Pesagem, Propriedade, ProtocoloIATF, RacaAnimal,
                        RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
 
 # ============================================================================
@@ -191,6 +191,67 @@ class AreaResumoSerializer(serializers.ModelSerializer):
 
 
 # ============================================================================
+# SERIALIZERS DE ESPÉCIES E RAÇAS
+# ============================================================================
+
+class EspecieAnimalSerializer(serializers.ModelSerializer):
+    """Serializer para espécies de animais"""
+    total_animais = serializers.SerializerMethodField()
+    total_racas = serializers.SerializerMethodField()
+    categorias_disponiveis = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EspecieAnimal
+        fields = [
+            'id', 'nome', 'nome_display', 'peso_ua_referencia', 
+            'periodo_gestacao_dias', 'idade_primeira_cobertura_meses',
+            'ativo', 'data_criacao', 'data_atualizacao',
+            'total_animais', 'total_racas', 'categorias_disponiveis'
+        ]
+        read_only_fields = ['id', 'data_criacao', 'data_atualizacao']
+
+    def get_total_animais(self, obj):
+        """Retorna o total de animais desta espécie"""
+        return obj.animais.filter(status='ativo').count()
+
+    def get_total_racas(self, obj):
+        """Retorna o total de raças desta espécie"""
+        return obj.racas.filter(ativo=True).count()
+
+    def get_categorias_disponiveis(self, obj):
+        """Retorna as categorias disponíveis para esta espécie"""
+        return obj.get_categorias()
+
+
+class RacaAnimalSerializer(serializers.ModelSerializer):
+    """Serializer para raças de animais"""
+    especie = EspecieAnimalSerializer(read_only=True)
+    especie_id = serializers.UUIDField(write_only=True)
+    total_animais = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RacaAnimal
+        fields = [
+            'id', 'especie', 'especie_id', 'nome', 'origem', 
+            'caracteristicas', 'peso_medio_adulto_kg', 'ativo',
+            'data_criacao', 'data_atualizacao', 'total_animais'
+        ]
+        read_only_fields = ['id', 'data_criacao', 'data_atualizacao']
+
+    def get_total_animais(self, obj):
+        """Retorna o total de animais desta raça"""
+        return obj.animais.filter(status='ativo').count()
+
+
+class RacaAnimalResumoSerializer(serializers.ModelSerializer):
+    """Serializer resumido para raças de animais"""
+    
+    class Meta:
+        model = RacaAnimal
+        fields = ['id', 'nome', 'especie']
+
+
+# ============================================================================
 # SERIALIZERS DE ANIMAIS E LOTES
 # ============================================================================
 
@@ -198,6 +259,10 @@ class AnimalSerializer(serializers.ModelSerializer):
     """Serializer para animais"""
     propriedade = PropriedadeResumoSerializer(read_only=True)
     propriedade_id = serializers.UUIDField(write_only=True)
+    especie = EspecieAnimalSerializer(read_only=True)
+    especie_id = serializers.UUIDField(write_only=True)
+    raca = RacaAnimalResumoSerializer(read_only=True)
+    raca_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     lote_atual = serializers.StringRelatedField(read_only=True)
     lote_atual_id = serializers.UUIDField(
         write_only=True, required=False, allow_null=True)
@@ -214,10 +279,11 @@ class AnimalSerializer(serializers.ModelSerializer):
         model = Animal
         fields = [
             'id', 'propriedade', 'propriedade_id', 'identificacao_unica', 'nome_registro',
-            'sexo', 'data_nascimento', 'raca', 'categoria', 'status', 'pai', 'mae',
-            'data_compra', 'valor_compra', 'origem', 'data_venda', 'valor_venda', 'destino',
-            'data_morte', 'causa_morte', 'lote_atual', 'lote_atual_id', 'fotos_evolucao',
-            'observacoes', 'data_criacao', 'data_atualizacao', 'idade_dias', 'idade_meses',
+            'sexo', 'data_nascimento', 'especie', 'especie_id', 'raca', 'raca_id', 
+            'categoria', 'status', 'pai', 'mae', 'data_compra', 'valor_compra', 'origem', 
+            'data_venda', 'valor_venda', 'destino', 'data_morte', 'causa_morte', 
+            'lote_atual', 'lote_atual_id', 'fotos_evolucao', 'observacoes', 
+            'data_criacao', 'data_atualizacao', 'idade_dias', 'idade_meses',
             'peso_atual', 'ua_value'
         ]
         read_only_fields = ['id', 'data_criacao', 'data_atualizacao']
@@ -231,6 +297,8 @@ class AnimalSerializer(serializers.ModelSerializer):
 
 class AnimalResumoSerializer(serializers.ModelSerializer):
     """Serializer resumido para animais"""
+    especie_nome = serializers.CharField(source='especie.nome_display', read_only=True)
+    raca_nome = serializers.CharField(source='raca.nome', read_only=True)
     idade_meses = serializers.IntegerField(read_only=True)
     peso_atual = serializers.DecimalField(
         max_digits=6, decimal_places=2, read_only=True)
@@ -238,8 +306,8 @@ class AnimalResumoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Animal
         fields = [
-            'id', 'identificacao_unica', 'nome_registro', 'sexo', 'categoria', 'raca',
-            'idade_meses', 'peso_atual', 'status'
+            'id', 'identificacao_unica', 'nome_registro', 'sexo', 'categoria', 
+            'especie_nome', 'raca_nome', 'idade_meses', 'peso_atual', 'status'
         ]
 
 

@@ -10,13 +10,15 @@ from .api.v1.views import (AdministracaoMedicamentoViewSet, AnimalViewSet,
                            AreaViewSet, CalendarioSanitarioViewSet,
                            CategoriaFinanceiraViewSet,
                            ConfiguracaoSistemaViewSet, ContaFinanceiraViewSet,
-                           DiagnosticoGestacaoViewSet, EstacaoMontaViewSet,
+                           DiagnosticoGestacaoViewSet, EspecieAnimalViewSet,
+                           EstacaoMontaViewSet,
                            HistoricoLoteAnimalViewSet,
                            HistoricoOcupacaoAreaViewSet, InseminacaoViewSet,
                            LancamentoFinanceiroViewSet, LoteViewSet,
                            ManejoViewSet, MedicamentoViewSet, PartoViewSet,
                            PesagemViewSet, PropriedadeViewSet,
-                           ProtocoloIATFViewSet, RelatorioPersonalizadoViewSet,
+                           ProtocoloIATFViewSet, RacaAnimalViewSet,
+                           RelatorioPersonalizadoViewSet,
                            UsuarioViewSet, VacinacaoViewSet, VacinaViewSet)
 
 # Configuração do router
@@ -26,6 +28,8 @@ router = DefaultRouter()
 router.register(r'usuarios', UsuarioViewSet)
 router.register(r'propriedades', PropriedadeViewSet)
 router.register(r'areas', AreaViewSet)
+router.register(r'especies', EspecieAnimalViewSet)
+router.register(r'racas', RacaAnimalViewSet)
 router.register(r'animais', AnimalViewSet)
 router.register(r'lotes', LoteViewSet)
 router.register(r'manejos', ManejoViewSet)

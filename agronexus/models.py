@@ -202,6 +202,109 @@ class Area(models.Model):
 
 
 # ============================================================================
+# ESPÉCIES E RAÇAS
+# ============================================================================
+
+class EspecieAnimal(models.Model):
+    """
+    Espécies de animais suportadas pelo sistema
+    """
+    ESPECIES_CHOICES = [
+        ('bovino', 'Bovino'),
+        ('caprino', 'Caprino'),
+        ('ovino', 'Ovino'),
+        ('equino', 'Equino'),
+        ('suino', 'Suíno'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nome = models.CharField(
+        max_length=20, choices=ESPECIES_CHOICES, unique=True)
+    nome_display = models.CharField(max_length=50)
+    peso_ua_referencia = models.DecimalField(
+        max_digits=6, decimal_places=2, default=450,
+        help_text="Peso de referência para 1 UA em kg"
+    )
+    periodo_gestacao_dias = models.IntegerField(
+        default=285, help_text="Período de gestação em dias"
+    )
+    idade_primeira_cobertura_meses = models.IntegerField(
+        default=24, help_text="Idade recomendada para primeira cobertura"
+    )
+    ativo = models.BooleanField(default=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_atualizacao = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'especies_animais'
+        verbose_name = 'Espécie Animal'
+        verbose_name_plural = 'Espécies Animais'
+        ordering = ['nome']
+
+    def __str__(self):
+        return self.nome_display
+
+    def get_categorias(self):
+        """Retorna categorias disponíveis para esta espécie"""
+        categorias_por_especie = {
+            'bovino': [
+                ('bezerro', 'Bezerro'),
+                ('bezerra', 'Bezerra'),
+                ('novilho', 'Novilho'),
+                ('novilha', 'Novilha'),
+                ('touro', 'Touro'),
+                ('vaca', 'Vaca'),
+            ],
+            'caprino': [
+                ('cabrito', 'Cabrito'),
+                ('cabrita', 'Cabrita'),
+                ('bode_jovem', 'Bode Jovem'),
+                ('cabra_jovem', 'Cabra Jovem'),
+                ('bode', 'Bode'),
+                ('cabra', 'Cabra'),
+            ],
+            'ovino': [
+                ('cordeiro', 'Cordeiro'),
+                ('cordeira', 'Cordeira'),
+                ('carneiro_jovem', 'Carneiro Jovem'),
+                ('ovelha_jovem', 'Ovelha Jovem'),
+                ('carneiro', 'Carneiro'),
+                ('ovelha', 'Ovelha'),
+            ],
+        }
+        return categorias_por_especie.get(self.nome, [])
+
+
+class RacaAnimal(models.Model):
+    """
+    Raças disponíveis por espécie
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    especie = models.ForeignKey(
+        EspecieAnimal, on_delete=models.CASCADE, related_name='racas'
+    )
+    nome = models.CharField(max_length=100)
+    origem = models.CharField(max_length=100, blank=True)
+    caracteristicas = models.TextField(blank=True)
+    peso_medio_adulto_kg = models.DecimalField(
+        max_digits=6, decimal_places=2, blank=True, null=True
+    )
+    ativo = models.BooleanField(default=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_atualizacao = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'racas_animais'
+        verbose_name = 'Raça Animal'
+        verbose_name_plural = 'Raças Animais'
+        ordering = ['especie', 'nome']
+        unique_together = ['especie', 'nome']
+
+    def __str__(self):
+        return f"{self.especie.nome_display} - {self.nome}"
+
+
+# ============================================================================
 # ANIMAIS E LOTES
 # ============================================================================
 
@@ -231,6 +334,17 @@ class Animal(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Espécie e raça
+    especie = models.ForeignKey(
+        EspecieAnimal, on_delete=models.CASCADE,
+        related_name='animais'
+    )
+    raca = models.ForeignKey(
+        RacaAnimal, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='animais'
+    )
+
     propriedade = models.ForeignKey(
         Propriedade, on_delete=models.CASCADE, related_name='animais')
     identificacao_unica = models.CharField(
@@ -238,8 +352,7 @@ class Animal(models.Model):
     nome_registro = models.CharField(max_length=100, blank=True)
     sexo = models.CharField(max_length=1, choices=SEXO_CHOICES)
     data_nascimento = models.DateField()
-    raca = models.CharField(max_length=100)
-    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES)
+    categoria = models.CharField(max_length=20)  # Removido choices fixos
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='ativo')
 
@@ -295,6 +408,25 @@ class Animal(models.Model):
         if self.data_nascimento and self.data_nascimento > timezone.now().date():
             raise ValidationError('Data de nascimento não pode ser futura')
 
+        # Validações de espécie
+        if self.pai and self.pai.especie != self.especie:
+            raise ValidationError('O pai deve ser da mesma espécie')
+        if self.mae and self.mae.especie != self.especie:
+            raise ValidationError('A mãe deve ser da mesma espécie')
+
+        # Validar categoria por espécie
+        if self.categoria:
+            categorias_validas = [cat[0]
+                                  for cat in self.get_categorias_disponiveis()]
+            if self.categoria not in categorias_validas:
+                raise ValidationError(
+                    f'Categoria "{self.categoria}" não é válida para {self.especie.nome_display}')
+
+        # Validar raça por espécie
+        if self.raca and self.raca.especie != self.especie:
+            raise ValidationError(
+                'A raça deve pertencer à espécie selecionada')
+
     def get_idade_dias(self):
         """Retorna a idade do animal em dias"""
         if self.status == 'morto' and self.data_morte:
@@ -311,11 +443,32 @@ class Animal(models.Model):
         return ultima_pesagem.peso_kg if ultima_pesagem else None
 
     def get_ua_value(self):
-        """Calcula o valor em UA (Unidade Animal) baseado no peso atual"""
+        """Calcula o valor em UA baseado na espécie"""
         peso = self.get_peso_atual()
         if peso:
-            return float(peso) / 450.0  # 1 UA = 450kg
-        return 0.5  # Valor padrão para animais sem pesagem
+            return float(peso) / float(self.especie.peso_ua_referencia)
+
+        # Valores padrão por espécie se não houver pesagem
+        valores_padrao = {
+            'bovino': 0.5,
+            'caprino': 0.1,
+            'ovino': 0.1,
+            'equino': 0.8,
+            'suino': 0.3,
+        }
+        return valores_padrao.get(self.especie.nome, 0.5)
+
+    def get_categorias_disponiveis(self):
+        """Retorna categorias baseadas na espécie"""
+        return self.especie.get_categorias()
+
+    def get_periodo_gestacao(self):
+        """Retorna o período de gestação para a espécie"""
+        return self.especie.periodo_gestacao_dias
+
+    def get_idade_primeira_cobertura(self):
+        """Retorna a idade recomendada para primeira cobertura"""
+        return self.especie.idade_primeira_cobertura_meses
 
     def get_gmd_periodo(self, dias=30):
         """Calcula o GMD (Ganho Médio Diário) dos últimos X dias"""
@@ -369,9 +522,39 @@ class Lote(models.Model):
     nome = models.CharField(max_length=100)
     descricao = models.TextField(blank=True)
     criterio_agrupamento = models.CharField(
-        max_length=200, help_text="Ex: Bezerros desmamados em 2025")
+        max_length=200, blank=True, help_text="Ex: Bezerros desmamados em 2025")
     area_atual = models.ForeignKey(
         Area, on_delete=models.SET_NULL, null=True, blank=True, related_name='lotes')
+
+    # Características do lote
+    APTIDAO_CHOICES = [
+        ('corte', 'Corte'),
+        ('leite', 'Leite'),
+        ('dupla_aptidao', 'Dupla Aptidão'),
+    ]
+
+    FINALIDADE_CHOICES = [
+        ('cria', 'Cria'),
+        ('recria', 'Recria'),
+        ('engorda', 'Engorda'),
+    ]
+
+    SISTEMA_CRIACAO_CHOICES = [
+        ('intensivo', 'Intensivo'),
+        ('extensivo', 'Extensivo'),
+        ('semi_extensivo', 'Semi-Extensivo'),
+    ]
+
+    aptidao = models.CharField(
+        max_length=20, choices=APTIDAO_CHOICES, blank=True,
+        help_text="Aptidão predominante do lote")
+    finalidade = models.CharField(
+        max_length=20, choices=FINALIDADE_CHOICES, blank=True,
+        help_text="Finalidade do lote na propriedade")
+    sistema_criacao = models.CharField(
+        max_length=20, choices=SISTEMA_CRIACAO_CHOICES, blank=True,
+        help_text="Sistema de criação utilizado para o lote")
+
     ativo = models.BooleanField(default=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
 
@@ -730,9 +913,10 @@ class DiagnosticoGestacao(models.Model):
         return f"{self.inseminacao.animal} - {self.get_resultado_display()} ({self.data_diagnostico})"
 
     def get_data_parto_prevista(self):
-        """Calcula a data prevista do parto (285 dias após inseminação)"""
+        """Calcula a data prevista do parto baseada na espécie"""
         if self.resultado == 'positivo':
-            return self.inseminacao.data_inseminacao + timedelta(days=285)
+            dias_gestacao = self.inseminacao.animal.especie.periodo_gestacao_dias
+            return self.inseminacao.data_inseminacao + timedelta(days=dias_gestacao)
         return None
 
 
@@ -761,8 +945,16 @@ class Parto(models.Model):
     resultado = models.CharField(max_length=15, choices=RESULTADO_CHOICES)
     dificuldade = models.CharField(
         max_length=15, choices=DIFICULDADE_CHOICES, default='normal')
+
+    # Suporte para múltiplos nascimentos (caprinos/ovinos)
+    numero_filhotes = models.IntegerField(default=1)
+    filhotes = models.ManyToManyField(
+        Animal, related_name='parto_origem', blank=True
+    )
+
+    # Mantido para compatibilidade com bovinos (um filhote)
     bezerro = models.ForeignKey(
-        Animal, on_delete=models.SET_NULL, null=True, blank=True, related_name='parto_origem')
+        Animal, on_delete=models.SET_NULL, null=True, blank=True, related_name='parto_origem_unico')
     peso_nascimento = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True)
     observacoes = models.TextField(blank=True)

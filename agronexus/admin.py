@@ -13,10 +13,10 @@ from django.utils.safestring import mark_safe
 from .models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
                      CalendarioSanitario, CategoriaFinanceira,
                      ConfiguracaoSistema, ContaFinanceira, DiagnosticoGestacao,
-                     EstacaoMonta, HistoricoLoteAnimal, HistoricoOcupacaoArea,
+                     EspecieAnimal, EstacaoMonta, HistoricoLoteAnimal, HistoricoOcupacaoArea,
                      Inseminacao, LancamentoFinanceiro, Lote, Manejo,
                      Medicamento, Parto, Pesagem, Propriedade, ProtocoloIATF,
-                     RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
+                     RacaAnimal, RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
 
 
 def get_propriedades_usuario(user):
@@ -72,6 +72,58 @@ def setup_propriedade_formfield(db_field, request, kwargs):
                 )
     return kwargs
 
+
+# ============================================================================
+# FILTROS CUSTOMIZADOS
+# ============================================================================
+
+class EspecieListFilter(admin.SimpleListFilter):
+    """Filtro customizado para espécies no admin de animais"""
+    title = 'Espécie'
+    parameter_name = 'especie'
+
+    def lookups(self, request, model_admin):
+        """Retorna opções de filtro baseadas nas espécies ativas"""
+        from .models import EspecieAnimal
+        especies = EspecieAnimal.objects.filter(ativo=True).order_by('nome_display')
+        return [(especie.id, especie.nome_display) for especie in especies]
+
+    def queryset(self, request, queryset):
+        """Filtra o queryset baseado na espécie selecionada"""
+        if self.value():
+            return queryset.filter(especie__id=self.value())
+        return queryset
+
+
+class CategoriaListFilter(admin.SimpleListFilter):
+    """Filtro customizado para categorias por espécie"""
+    title = 'Categoria'
+    parameter_name = 'categoria_especie'
+
+    def lookups(self, request, model_admin):
+        """Retorna opções de filtro baseadas nas categorias disponíveis"""
+        from .models import EspecieAnimal
+        
+        categorias = []
+        especies = EspecieAnimal.objects.filter(ativo=True)
+        
+        for especie in especies:
+            for categoria_code, categoria_name in especie.get_categorias():
+                categorias.append((f"{especie.nome}_{categoria_code}", f"{especie.nome_display}: {categoria_name}"))
+        
+        return sorted(categorias, key=lambda x: x[1])
+
+    def queryset(self, request, queryset):
+        """Filtra o queryset baseado na categoria e espécie"""
+        if self.value():
+            especie_nome, categoria = self.value().split('_', 1)
+            return queryset.filter(especie__nome=especie_nome, categoria=categoria)
+        return queryset
+
+
+# ============================================================================
+# ADMIN USUARIOS
+# ============================================================================
 
 @admin.register(Usuario)
 class UsuarioAdmin(UserAdmin):
@@ -203,18 +255,116 @@ class AreaAdmin(admin.ModelAdmin):
     get_lote_atual.short_description = 'Lote Atual'
 
 
+# ============================================================================
+# ADMIN ESPÉCIES E RAÇAS
+# ============================================================================
+
+class RacaInline(admin.TabularInline):
+    """Inline para mostrar raças dentro da espécie"""
+    model = RacaAnimal
+    extra = 1
+    fields = ['nome', 'origem', 'peso_medio_adulto_kg', 'ativo']
+    readonly_fields = []
+
+
+@admin.register(EspecieAnimal)
+class EspecieAnimalAdmin(admin.ModelAdmin):
+    """Admin para espécies de animais"""
+    list_display = ['nome_display', 'nome', 'peso_ua_referencia', 'periodo_gestacao_dias', 
+                    'idade_primeira_cobertura_meses', 'ativo', 'get_total_animais']
+    list_filter = ['ativo', 'nome']
+    search_fields = ['nome', 'nome_display']
+    ordering = ['nome']
+    readonly_fields = ['data_criacao', 'data_atualizacao', 'get_total_animais', 'get_total_racas']
+    inlines = [RacaInline]
+    
+    fieldsets = [
+        ('Informações Básicas', {
+            'fields': ('nome', 'nome_display', 'ativo')
+        }),
+        ('Configurações Técnicas', {
+            'fields': ('peso_ua_referencia', 'periodo_gestacao_dias', 'idade_primeira_cobertura_meses')
+        }),
+        ('Estatísticas', {
+            'fields': ('get_total_animais', 'get_total_racas'),
+            'classes': ('collapse',)
+        }),
+        ('Metadados', {
+            'fields': ('data_criacao', 'data_atualizacao'),
+            'classes': ('collapse',)
+        })
+    ]
+    
+    def get_total_animais(self, obj):
+        """Retorna o total de animais desta espécie"""
+        total = obj.animais.filter(status='ativo').count()
+        if total > 0:
+            url = f"/admin/agronexus/animal/?especie__id__exact={obj.id}"
+            return format_html('<a href="{}">{} animais</a>', url, total)
+        return '0 animais'
+    get_total_animais.short_description = 'Total de Animais'
+    
+    def get_total_racas(self, obj):
+        """Retorna o total de raças desta espécie"""
+        total = obj.racas.filter(ativo=True).count()
+        if total > 0:
+            url = f"/admin/agronexus/racaanimal/?especie__id__exact={obj.id}"
+            return format_html('<a href="{}">{} raças</a>', url, total)
+        return '0 raças'
+    get_total_racas.short_description = 'Total de Raças'
+
+
+@admin.register(RacaAnimal)
+class RacaAnimalAdmin(admin.ModelAdmin):
+    """Admin para raças de animais"""
+    list_display = ['nome', 'especie', 'origem', 'peso_medio_adulto_kg', 'ativo', 'get_total_animais']
+    list_filter = ['especie', 'ativo', 'origem']
+    search_fields = ['nome', 'especie__nome_display', 'origem']
+    ordering = ['especie', 'nome']
+    readonly_fields = ['data_criacao', 'data_atualizacao', 'get_total_animais']
+    
+    fieldsets = [
+        ('Informações Básicas', {
+            'fields': ('especie', 'nome', 'origem', 'ativo')
+        }),
+        ('Características', {
+            'fields': ('peso_medio_adulto_kg', 'caracteristicas')
+        }),
+        ('Estatísticas', {
+            'fields': ('get_total_animais',),
+            'classes': ('collapse',)
+        }),
+        ('Metadados', {
+            'fields': ('data_criacao', 'data_atualizacao'),
+            'classes': ('collapse',)
+        })
+    ]
+    
+    def get_total_animais(self, obj):
+        """Retorna o total de animais desta raça"""
+        total = obj.animais.filter(status='ativo').count()
+        if total > 0:
+            url = f"/admin/agronexus/animal/?raca__id__exact={obj.id}"
+            return format_html('<a href="{}">{} animais</a>', url, total)
+        return '0 animais'
+    get_total_animais.short_description = 'Total de Animais'
+
+
 @admin.register(Animal)
 class AnimalAdmin(admin.ModelAdmin):
     """Admin para animais"""
-    list_display = ['identificacao_unica', 'nome_registro',
-                    'propriedade', 'sexo', 'categoria', 'status', 'get_idade_meses']
-    list_filter = ['sexo', 'categoria', 'status', 'propriedade', 'raca']
-    search_fields = ['identificacao_unica',
-                     'nome_registro', 'propriedade__nome']
+    list_display = ['identificacao_unica', 'nome_registro', 'especie', 'raca',
+                    'propriedade', 'sexo', 'categoria', 'status', 'get_idade_meses', 'get_peso_atual_display']
+    list_filter = [EspecieListFilter, CategoriaListFilter, 'sexo', 'status', 'propriedade', 'raca__nome']
+    search_fields = ['identificacao_unica', 'nome_registro', 'propriedade__nome', 
+                     'especie__nome_display', 'raca__nome']
     ordering = ['propriedade', 'identificacao_unica']
-    readonly_fields = ['id', 'data_criacao',
-                       'data_atualizacao', 'get_idade_dias', 'get_peso_atual']
-
+    readonly_fields = ['id', 'data_criacao', 'data_atualizacao', 'get_idade_dias', 
+                       'get_peso_atual_display', 'get_ua_value_display']
+    
+    # Filtros de propriedade dinâmicos
+    autocomplete_fields = ['pai', 'mae', 'lote_atual']
+    
     def get_queryset(self, request):
         """
         Filtra animais baseado nas propriedades do usuário
@@ -224,48 +374,81 @@ class AnimalAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """
-        Filtra as propriedades disponíveis no formulário
+        Filtra as propriedades e raças disponíveis no formulário
         """
+        # Filtrar propriedades baseado no usuário
         kwargs = setup_propriedade_formfield(db_field, request, kwargs)
+        
+        # Filtrar raças baseado na espécie selecionada (implementar via JavaScript no frontend)
+        if db_field.name == "raca":
+            kwargs["queryset"] = RacaAnimal.objects.filter(ativo=True).select_related('especie')
+        
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     fieldsets = [
         ('Identificação', {
             'fields': ('identificacao_unica', 'nome_registro', 'propriedade')
         }),
-        ('Características', {
-            'fields': ('sexo', 'data_nascimento', 'raca', 'categoria', 'status')
+        ('Características Biológicas', {
+            'fields': ('especie', 'raca', 'sexo', 'data_nascimento', 'categoria', 'status')
         }),
         ('Genealogia', {
-            'fields': ('pai', 'mae')
+            'fields': ('pai', 'mae'),
+            'classes': ('collapse',)
         }),
         ('Dados Comerciais', {
-            'fields': ('data_compra', 'valor_compra', 'origem', 'data_venda', 'valor_venda', 'destino')
+            'fields': ('data_compra', 'valor_compra', 'origem', 'data_venda', 'valor_venda', 'destino'),
+            'classes': ('collapse',)
         }),
         ('Dados de Morte', {
             'fields': ('data_morte', 'causa_morte'),
             'classes': ('collapse',)
         }),
-        ('Localização', {
+        ('Localização Atual', {
             'fields': ('lote_atual',)
         }),
-        ('Observações', {
-            'fields': ('observacoes', 'fotos_evolucao')
+        ('Informações Adicionais', {
+            'fields': ('observacoes', 'fotos_evolucao'),
+            'classes': ('collapse',)
+        }),
+        ('Métricas e Estatísticas', {
+            'fields': ('get_idade_dias', 'get_peso_atual_display', 'get_ua_value_display'),
+            'classes': ('collapse',)
         }),
         ('Metadados', {
-            'fields': ('id', 'data_criacao', 'data_atualizacao', 'get_idade_dias', 'get_peso_atual'),
+            'fields': ('id', 'data_criacao', 'data_atualizacao'),
             'classes': ('collapse',)
         })
     ]
 
     def get_idade_meses(self, obj):
-        return obj.get_idade_meses()
-    get_idade_meses.short_description = 'Idade (meses)'
+        return f"{obj.get_idade_meses()} meses"
+    get_idade_meses.short_description = 'Idade'
 
-    def get_peso_atual(self, obj):
+    def get_peso_atual_display(self, obj):
         peso = obj.get_peso_atual()
         return f"{peso} kg" if peso else '-'
-    get_peso_atual.short_description = 'Peso Atual'
+    get_peso_atual_display.short_description = 'Peso Atual'
+    
+    def get_ua_value_display(self, obj):
+        ua = obj.get_ua_value()
+        return f"{ua:.2f} UA"
+    get_ua_value_display.short_description = 'Valor UA'
+    
+    # Ações personalizadas
+    actions = ['marcar_como_vendido', 'marcar_como_ativo', 'exportar_para_csv']
+    
+    def marcar_como_vendido(self, request, queryset):
+        """Marca animais selecionados como vendidos"""
+        updated = queryset.update(status='vendido')
+        self.message_user(request, f'{updated} animais marcados como vendidos.')
+    marcar_como_vendido.short_description = "Marcar como vendido"
+    
+    def marcar_como_ativo(self, request, queryset):
+        """Marca animais selecionados como ativos"""
+        updated = queryset.update(status='ativo')
+        self.message_user(request, f'{updated} animais marcados como ativos.')
+    marcar_como_ativo.short_description = "Marcar como ativo"
 
 
 @admin.register(Lote)

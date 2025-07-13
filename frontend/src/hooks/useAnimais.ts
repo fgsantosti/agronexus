@@ -81,6 +81,82 @@ export function useAnimais() {
       peso_atual: 320,
       lote_atual: 'lote-2',
       gmd: 0.7
+    },
+    // Animais sem lote (externos)
+    {
+      id: 'animal-6',
+      identificacao_unica: 'BR006',
+      nome_registro: 'Tornado',
+      sexo: 'M',
+      data_nascimento: '2022-06-15',
+      especie: 'Bovino',
+      raca: 'Brahman',
+      categoria: 'Novilho',
+      status: 'ativo',
+      peso_atual: 380,
+      lote_atual: undefined,
+      gmd: 1.0,
+      observacoes: 'Pronto para ser alocado em lote'
+    },
+    {
+      id: 'animal-7',
+      identificacao_unica: 'BR007',
+      nome_registro: 'Princesa',
+      sexo: 'F',
+      data_nascimento: '2023-02-20',
+      especie: 'Bovino',
+      raca: 'Nelore',
+      categoria: 'Novilha',
+      status: 'ativo',
+      peso_atual: 250,
+      lote_atual: undefined,
+      gmd: 0.8,
+      observacoes: 'Recém chegada da fazenda vizinha'
+    },
+    {
+      id: 'animal-8',
+      identificacao_unica: 'BR008',
+      nome_registro: 'Gigante',
+      sexo: 'M',
+      data_nascimento: '2021-09-10',
+      especie: 'Bovino',
+      raca: 'Angus',
+      categoria: 'Touro',
+      status: 'ativo',
+      peso_atual: 720,
+      lote_atual: undefined,
+      gmd: 0.5,
+      observacoes: 'Reprodutor em quarentena'
+    },
+    {
+      id: 'animal-9',
+      identificacao_unica: 'BR009',
+      nome_registro: 'Serena',
+      sexo: 'F',
+      data_nascimento: '2023-04-05',
+      especie: 'Bovino',
+      raca: 'Gir',
+      categoria: 'Bezerra',
+      status: 'ativo',
+      peso_atual: 150,
+      lote_atual: undefined,
+      gmd: 1.2,
+      observacoes: 'Desmamada recentemente'
+    },
+    {
+      id: 'animal-10',
+      identificacao_unica: 'BR010',
+      nome_registro: 'Relâmpago',
+      sexo: 'M',
+      data_nascimento: '2022-12-01',
+      especie: 'Bovino',
+      raca: 'Nelore',
+      categoria: 'Bezerro',
+      status: 'ativo',
+      peso_atual: 200,
+      lote_atual: undefined,
+      gmd: 1.1,
+      observacoes: 'Animal jovem para engorda'
     }
   ]
 
@@ -107,6 +183,10 @@ export function useAnimais() {
 
   const getAnimalById = useCallback((animalId: string): Animal | undefined => {
     return animais.find(animal => animal.id === animalId)
+  }, [animais])
+
+  const getAnimaisExternos = useCallback((): Animal[] => {
+    return animais.filter(animal => !animal.lote_atual)
   }, [animais])
 
   const criarAnimal = async (dadosAnimal: Omit<Animal, 'id'>): Promise<boolean> => {
@@ -194,6 +274,28 @@ export function useAnimais() {
     }
   }
 
+  const removerAnimalDoLote = async (animalId: string): Promise<boolean> => {
+    try {
+      setLoading(true)
+      
+      // Simulando chamada à API
+      await new Promise(resolve => setTimeout(resolve, 800))
+      
+      setAnimais(prev => prev.map(animal => 
+        animal.id === animalId 
+          ? { ...animal, lote_atual: undefined }
+          : animal
+      ))
+      return true
+    } catch (err) {
+      setError('Erro ao remover animal do lote')
+      console.error('Erro ao remover animal do lote:', err)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     carregarAnimais()
   }, [carregarAnimais])
@@ -205,9 +307,11 @@ export function useAnimais() {
     carregarAnimais,
     getAnimaisByLote,
     getAnimalById,
+    getAnimaisExternos,
     criarAnimal,
     atualizarAnimal,
     excluirAnimal,
-    moverAnimalParaLote
+    moverAnimalParaLote,
+    removerAnimalDoLote
   }
 }

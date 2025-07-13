@@ -13,6 +13,8 @@ import { useAnimais } from '@/hooks/useAnimais'
 import { Lote, EstatisticasLote } from '@/types/lote'
 import { Animal } from '@/types/animal'
 import { AnimalCard } from '@/components/animal/animal-card'
+import { AnimaisExternos } from '@/components/animais/AnimaisExternos'
+import { HistoricoCompleto } from '@/components/historico/HistoricoCompleto'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,6 +160,7 @@ export function DetalheLote({ loteId }: DetalheLoteProps) {
         <TabsList>
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="animals">Animais</TabsTrigger>
+          <TabsTrigger value="external">Animais Externos</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
         </TabsList>
 
@@ -516,23 +519,18 @@ export function DetalheLote({ loteId }: DetalheLoteProps) {
           </Card>
         </TabsContent>
 
+        <TabsContent value="external">
+          <AnimaisExternos 
+            loteId={loteId}
+            onAdicionarAnimal={() => {
+              // TODO: Implementar modal para adicionar novo animal
+              console.log('Adicionar novo animal')
+            }}
+          />
+        </TabsContent>
+
         <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico Completo</CardTitle>
-              <CardDescription>
-                Todas as movimentações e alterações do lote
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Histórico detalhado será implementado em breve
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <HistoricoCompleto loteId={loteId} />
         </TabsContent>
       </Tabs>
     </div>

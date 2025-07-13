@@ -78,6 +78,20 @@ const data = {
       title: "Rebanho",
       url: "/rebanho",
       icon: Beef,
+      items: [
+        {
+          title: "Animais",
+          url: "/rebanho",
+        },
+        {
+          title: "Lotes",
+          url: "/lotes",
+        },
+        {
+          title: "Animais Externos",
+          url: "/rebanho/externos",
+        },
+      ],
     },
     {
       title: "Sanidade",

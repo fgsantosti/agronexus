@@ -24,10 +24,12 @@ import {
 import { ExportAnimais } from './export-animais'
 import { Animal, RebanhoStats, FiltrosAnimal } from '@/types/animal'
 import { useAnimaisImportados } from '@/hooks/useAnimaisImportados'
+import { useLotes } from '@/hooks/useLotes'
 
 export function ListaAnimais() {
   const router = useRouter()
   const { animais: animaisImportados, loading: loadingImportados, estatisticas, limparAnimais } = useAnimaisImportados()
+  const { lotes, loading: loadingLotes } = useLotes()
   const [animais, setAnimais] = useState<Animal[]>([])
   const [stats, setStats] = useState<RebanhoStats>({
     total_animais: 0,
@@ -83,15 +85,15 @@ export function ListaAnimais() {
     const animaisConvertidos: Animal[] = animaisImportados.map(animal => ({
       id: animal.id,
       identificacao_unica: animal.identificacao_unica,
-      nome_registro: animal.nome_registro,
+      nome_registro: animal.nome_registro || '',
       especie: animal.especie,
       sexo: animal.sexo as 'M' | 'F',
       data_nascimento: animal.data_nascimento,
-      raca: animal.raca,
+      raca: animal.raca || '',
       categoria: animal.categoria,
       status: animal.status,
       peso_atual: animal.peso_atual,
-      lote_atual: animal.lote_atual,
+      lote_atual: animal.lote_atual || '',
       observacoes: animal.observacoes,
       pai: animal.pai,
       mae: animal.mae
@@ -437,16 +439,172 @@ export function ListaAnimais() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="lotes">
+        <TabsContent value="lotes" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Lotes</h3>
+              <p className="text-sm text-muted-foreground">
+                Gerencie os lotes de animais da propriedade
+              </p>
+            </div>
+            <Button 
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={() => router.push('/lotes/novo')}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Lote
+            </Button>
+          </div>
+
+          {/* Stats dos lotes */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  TOTAL DE LOTES
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{lotes.length}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  LOTES ATIVOS
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {lotes.filter(lote => lote.ativo).length}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  TOTAL DE ANIMAIS
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {lotes.reduce((total, lote) => total + (lote.total_animais || 0), 0)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lista de lotes */}
           <Card>
-            <CardHeader>
-              <CardTitle>Lotes</CardTitle>
-              <CardDescription>Gerencie os lotes de animais</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Funcionalidade de lotes será implementada aqui.</p>
+            <CardContent className="p-0">
+              {loadingLotes ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="text-muted-foreground">Carregando lotes...</div>
+                </div>
+              ) : lotes.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-muted-foreground mb-4">
+                    Nenhum lote cadastrado ainda
+                  </div>
+                  <Button 
+                    onClick={() => router.push('/lotes/novo')}
+                    className="bg-teal-600 hover:bg-teal-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar Primeiro Lote
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Critério</TableHead>
+                      <TableHead>Área Atual</TableHead>
+                      <TableHead>Animais</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lotes.map((lote) => (
+                      <TableRow key={lote.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{lote.nome}</div>
+                            {lote.descricao && (
+                              <div className="text-sm text-muted-foreground">
+                                {lote.descricao.substring(0, 50)}
+                                {lote.descricao.length > 50 ? '...' : ''}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {lote.criterio_agrupamento}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {lote.area_atual ? (
+                            <div>
+                              <div className="font-medium">{lote.area_atual.nome}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {lote.area_atual.tipo} • {lote.area_atual.tamanho_ha}ha
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Sem área</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-center">
+                            <div className="font-bold">{lote.total_animais || 0}</div>
+                            <div className="text-xs text-muted-foreground">animais</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={lote.ativo ? 'default' : 'secondary'}>
+                            {lote.ativo ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/lotes/${lote.id}`)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/lotes/${lote.id}/editar`)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
+
+          {/* Link para gerenciamento completo */}
+          <div className="text-center">
+            <Button 
+              variant="outline"
+              onClick={() => router.push('/lotes')}
+            >
+              Ver Gerenciamento Completo de Lotes
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="reprodutores">

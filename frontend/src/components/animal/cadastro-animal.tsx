@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, CheckCircle, Circle, ArrowLeft, ArrowRight, Save, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/libs/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'

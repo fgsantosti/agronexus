@@ -4,7 +4,7 @@ import * as React from "react"
 import { XIcon } from "lucide-react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/libs/utils"
 
 function FullscreenDialog({
   ...props

@@ -26,7 +26,7 @@ import {
   EndHour,
   StartHour,
 } from "./constants"
-import { cn } from "@/lib/utils"
+import { cn } from "@/libs/utils"
 
 interface DayViewProps {
   currentDate: Date

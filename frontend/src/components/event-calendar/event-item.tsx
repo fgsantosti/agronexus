@@ -10,7 +10,7 @@ import {
   getEventColorClasses,
 } from "./utils"
 import type { CalendarEvent } from "./types"
-import { cn } from "@/lib/utils"
+import { cn } from "@/libs/utils"
 
 // Using date-fns format with custom formatting:
 // 'h' - hours (1-12)

@@ -36,7 +36,7 @@ import {
   WeekCellsHeight,
   WeekView,
 } from "@/components/event-calendar"
-import { cn } from "@/lib/utils"
+import { cn } from "@/libs/utils"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,

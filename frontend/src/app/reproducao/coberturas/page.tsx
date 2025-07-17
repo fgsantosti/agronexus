@@ -6,6 +6,7 @@ import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { Users, CheckCircle, XCircle, User2, Search, Filter } from "lucide-react";
 
 // Mock de dados
@@ -182,6 +183,11 @@ export default function CoberturasPage() {
       description="Acompanhe e filtre todas as coberturas realizadas na propriedade."
       filters={filters}
       stats={stats}
+      actionButton={
+        <a href="/reproducao/coberturas/cadastrar">
+          <Button variant="default">Cadastrar Inseminação</Button>
+        </a>
+      }
     >
       {table}
     </DashboardSection>

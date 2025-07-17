@@ -21,10 +21,15 @@
 - Nunca rode comandos Python sem ativar o ambiente virtual.
 
 ### Integração Frontend/Backend
-
+- Sempre Verifique o models e depois a views.py para entender os dados disponíveis.
+- Utilize os modelos e exemplos já definidos na API para criar ou modificar o frontend.
 - O frontend (Next.js) deve consumir apenas dados e estruturas já definidos na API do backend.
 - Não implemente chamadas reais à API sem autorização.
 - Para mockar dados no frontend, siga os exemplos e tipos definidos nos arquivos da API.
+- Utilize os modelos e exemplos já existentes para garantir consistência.
+- Ultilize o que esta em "@/components/layout/dashboard-layout" para o layout do frontend, evitando criar novos componentes de layout.
+- Mantenha o layout consistente com o design já implementado, utilizando os componentes existentes e o Shadcn UI.
+- utilize a forma de mostrar as informações que já esta implementada no frontend, como tabelas, cards e badges, de frontend\src\app\lotes. Implementando novos componentes apenas quando necessário e seguindo o padrão já existente, seguindo o padrao de cores e estilos do Shadcn UI, fazendo o CRUD de forma consistente com o que ja esta implementado, posiçao do botão de adicionar, botões de ação, Header, Footer, etc.
 
 ### Padrões de Modificação
 

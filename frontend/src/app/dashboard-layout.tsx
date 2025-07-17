@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar"
 import { DashboardContent } from "@/components/dashboard/dashboard-content"
 
-export default function DashboardPage() {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -42,8 +42,9 @@ export default function DashboardPage() {
             </Breadcrumb>
           </div>
         </header>
-        <DashboardContent />
+        {/* Renderiza o conteúdo da página dentro do layout */}
+        {children}
       </SidebarInset>
     </SidebarProvider>
   )
-}
+           {/* Removido DashboardContent para evitar duplicidade */}

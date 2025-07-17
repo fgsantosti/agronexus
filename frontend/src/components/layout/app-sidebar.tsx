@@ -87,10 +87,7 @@ const data = {
           title: "Lotes",
           url: "/lotes",
         },
-        {
-          title: "Animais Externos",
-          url: "/rebanho/externos",
-        },
+        // Removido: Animais Externos
       ],
     },
     {

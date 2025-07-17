@@ -258,7 +258,6 @@ export function ListaAnimais() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="animais">ANIMAIS</TabsTrigger>
           <TabsTrigger value="lotes">LOTES</TabsTrigger>
-          <TabsTrigger value="reprodutores">REPRODUTORES EXTERNOS</TabsTrigger>
         </TabsList>
 
         <TabsContent value="animais" className="space-y-4">
@@ -605,18 +604,6 @@ export function ListaAnimais() {
               Ver Gerenciamento Completo de Lotes
             </Button>
           </div>
-        </TabsContent>
-
-        <TabsContent value="reprodutores">
-          <Card>
-            <CardHeader>
-              <CardTitle>Reprodutores Externos</CardTitle>
-              <CardDescription>Gerencie reprodutores externos</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Funcionalidade de reprodutores externos será implementada aqui.</p>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

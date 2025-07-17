@@ -1,13 +1,16 @@
 
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 // Removido import do DashboardLayout, pois o layout já é aplicado via layout.tsx
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, XCircle, User2, Search, Filter } from "lucide-react";
+import { Users, CheckCircle, XCircle, User2, Search, Filter, MoreVertical } from "lucide-react";
+import { TableActions } from "@/components/ui/table-actions";
+import { Eye, Edit, Trash2 } from "lucide-react";
 
 // Mock de dados
 const coberturas = [
@@ -133,6 +136,7 @@ export default function CoberturasPage() {
   );
 
   // Tabela principal
+  const router = useRouter();
   const table = (
     <Card className="p-4">
       <Table>
@@ -146,6 +150,7 @@ export default function CoberturasPage() {
             <TableHead>Estação de Monta</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Diagnóstico</TableHead>
+            <TableHead className="w-[80px]">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -170,6 +175,28 @@ export default function CoberturasPage() {
                 </Badge>
               </TableCell>
               <TableCell>{cobertura.resultado_diagnostico}</TableCell>
+              <TableCell>
+                <TableActions
+                  actions={[
+                    {
+                      label: "Ver Detalhes",
+                      icon: <Eye className="w-4 h-4 mr-2" />,
+                      onClick: () => router.push(`/reproducao/coberturas/${cobertura.id}`),
+                    },
+                    {
+                      label: "Editar",
+                      icon: <Edit className="w-4 h-4 mr-2" />,
+                      onClick: () => router.push(`/reproducao/coberturas/${cobertura.id}/editar`),
+                    },
+                    {
+                      label: "Excluir",
+                      icon: <Trash2 className="w-4 h-4 mr-2" />,
+                      onClick: () => alert('Funcionalidade de exclusão ainda não implementada.'),
+                      danger: true,
+                    },
+                  ]}
+                />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

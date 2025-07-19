@@ -6,8 +6,11 @@ import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { EstatisticasCards } from "@/components/parciais/common/GenericEstatisticasCards";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, XCircle, User2, Eye, Edit, Trash2 } from "lucide-react";
+import { Users, CheckCircle, XCircle, User2 } from "lucide-react";
+import { CommonActionMenu } from "@/components/parciais/common/GenericActionMenu";
+import { Eye, Edit, Trash2, Ban } from "lucide-react";
 import { GenericList } from "@/components/parciais/lista-parciais";
+import { GenericFiltros } from "@/components/parciais/common/GenericFiltros";
 
 // Mock de dados
 const coberturas = [
@@ -104,13 +107,28 @@ export default function CoberturasPage() {
     { header: 'Diagnóstico', cell: (c: any) => c.resultado_diagnostico },
   ];
 
-  // Ações para cada linha
+  // Ações para cada linha usando componente comum genérico
   const actions = (c: any) => (
-    <div className="flex gap-2">
-      <Button size="icon" variant="ghost" onClick={() => router.push(`/reproducao/coberturas/${c.id}`)}><Eye className="w-4 h-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => router.push(`/reproducao/coberturas/${c.id}/editar`)}><Edit className="w-4 h-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => alert('Funcionalidade de exclusão ainda não implementada.')}><Trash2 className="w-4 h-4 text-red-600" /></Button>
-    </div>
+    <CommonActionMenu
+      items={[ 
+        {
+          label: "Ver Detalhes",
+          icon: <Eye className="w-4 h-4 mr-2" />,
+          onClick: () => router.push(`/reproducao/coberturas/${c.id}`),
+        },
+        {
+          label: "Editar",
+          icon: <Edit className="w-4 h-4 mr-2" />,
+          onClick: () => router.push(`/reproducao/coberturas/${c.id}/editar`),
+        },
+        {
+          label: "Excluir",
+          icon: <Trash2 className="w-4 h-4 mr-2 text-red-600" />,
+          onClick: () => alert('Funcionalidade de exclusão ainda não implementada.'),
+          className: "text-red-600 focus:text-red-600"
+        },
+      ]}
+    />
   );
 
   return (
@@ -124,26 +142,10 @@ export default function CoberturasPage() {
       }
     >
       <GenericList
-        title="Coberturas/Inseminações"
+        title=""
         data={coberturasFiltradas}
         columns={columns}
         actions={actions}
-        search={{
-          value: search,
-          onChange: setSearch,
-          placeholder: "Pesquisar animal..."
-        }}
-        selects={[{
-          value: status,
-          onChange: setStatus,
-          options: [
-            { value: "todos", label: "Todos os status" },
-            { value: "aguardando", label: "Aguardando diagnóstico" },
-            { value: "confirmada", label: "Prenhez confirmada" },
-            { value: "negativa", label: "Diagnóstico negativo" },
-          ],
-          placeholder: "Status"
-        }]}
         emptyMessage="Nenhuma cobertura encontrada"
         emptyAction={
           <Button onClick={() => router.push('/reproducao/coberturas/cadastrar')}>
@@ -151,11 +153,34 @@ export default function CoberturasPage() {
           </Button>
         }
         aboveTable={
-          <div className="w-full py-2">
-            <div className="max-w-4xl w-full mx-auto">
-              <EstatisticasCards cards={estatisticasCards} columns="grid-cols-1 md:grid-cols-4" />
+          <>
+            <div className="w-full py-2">
+              <div className="max-w-4xl w-full mx-auto">
+                <EstatisticasCards cards={estatisticasCards} columns="grid-cols-1 md:grid-cols-4" />
+              </div>
             </div>
-          </div>
+            <div className="w-full max-w-2xl mx-auto mb-4">
+              <GenericFiltros
+                search={{
+                  value: search,
+                  onChange: setSearch,
+                  placeholder: "Pesquisar animal..."
+                }}
+                selects={[{
+                  value: status,
+                  onChange: setStatus,
+                  options: [
+                    { value: "todos", label: "Todos os status" },
+                    { value: "aguardando", label: "Aguardando diagnóstico" },
+                    { value: "confirmada", label: "Prenhez confirmada" },
+                    { value: "negativa", label: "Diagnóstico negativo" },
+                  ],
+                  placeholder: "Status",
+                  widthClass: "w-40 md:w-[160px]"
+                }]}
+              />
+            </div>
+          </>
         }
       />
     </DashboardSection>

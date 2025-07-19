@@ -2,9 +2,8 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-// Removido import do DashboardLayout, pois o layout já é aplicado via layout.tsx
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
-import { Card } from "@/components/ui/card";
+import { EstatisticasCards } from "@/components/parciais/common/GenericEstatisticasCards";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, CheckCircle, XCircle, User2, Eye, Edit, Trash2 } from "lucide-react";
@@ -70,6 +69,29 @@ export default function CoberturasPage() {
   const totalNegativos = coberturasFiltradas.filter(c => c.status === 'Diagnóstico negativo').length;
   const totalAnimaisCobertos = new Set(coberturasFiltradas.map(c => c.animal)).size;
 
+  const estatisticasCards = [
+    {
+      label: 'Total de Coberturas',
+      value: totalCoberturas,
+      icon: <Users className="w-6 h-6 text-blue-500" />,
+    },
+    {
+      label: 'Prenhezes Confirmadas',
+      value: totalPrenhezes,
+      icon: <CheckCircle className="w-6 h-6 text-green-500" />,
+    },
+    {
+      label: 'Diagnósticos Negativos',
+      value: totalNegativos,
+      icon: <XCircle className="w-6 h-6 text-red-500" />,
+    },
+    {
+      label: 'Animais Cobertos',
+      value: totalAnimaisCobertos,
+      icon: <User2 className="w-6 h-6 text-purple-500" />,
+    },
+  ];
+
   // Colunas para GenericList
   const columns = [
     { header: 'Animal', cell: (c: any) => c.animal },
@@ -95,38 +117,6 @@ export default function CoberturasPage() {
     <DashboardSection
       title="Coberturas/Inseminações"
       description="Acompanhe e filtre todas as coberturas realizadas na propriedade."
-      stats={
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="flex flex-col items-start p-4">
-            <span className="text-muted-foreground text-sm mb-1">Total de Coberturas</span>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">{totalCoberturas}</span>
-              <Users className="w-6 h-6 text-blue-500" />
-            </div>
-          </Card>
-          <Card className="flex flex-col items-start p-4">
-            <span className="text-muted-foreground text-sm mb-1">Prenhezes Confirmadas</span>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">{totalPrenhezes}</span>
-              <CheckCircle className="w-6 h-6 text-green-500" />
-            </div>
-          </Card>
-          <Card className="flex flex-col items-start p-4">
-            <span className="text-muted-foreground text-sm mb-1">Diagnósticos Negativos</span>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">{totalNegativos}</span>
-              <XCircle className="w-6 h-6 text-red-500" />
-            </div>
-          </Card>
-          <Card className="flex flex-col items-start p-4">
-            <span className="text-muted-foreground text-sm mb-1">Animais Cobertos</span>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">{totalAnimaisCobertos}</span>
-              <User2 className="w-6 h-6 text-purple-500" />
-            </div>
-          </Card>
-        </div>
-      }
       actionButton={
         <a href="/reproducao/coberturas/cadastrar">
           <Button variant="default">Cadastrar Inseminação</Button>
@@ -159,6 +149,13 @@ export default function CoberturasPage() {
           <Button onClick={() => router.push('/reproducao/coberturas/cadastrar')}>
             Cadastrar Inseminação
           </Button>
+        }
+        aboveTable={
+          <div className="w-full py-2">
+            <div className="max-w-4xl w-full mx-auto">
+              <EstatisticasCards cards={estatisticasCards} columns="grid-cols-1 md:grid-cols-4" />
+            </div>
+          </div>
         }
       />
     </DashboardSection>

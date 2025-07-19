@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GenericFiltros } from "./common/GenericFiltros";
 import { GenericTable } from "./common/GenericTabela";
@@ -24,6 +23,7 @@ interface GenericListProps<T> {
   emptyMessage?: string;
   emptyAction?: React.ReactNode;
   children?: React.ReactNode;
+  aboveTable?: React.ReactNode;
 }
 
 export function GenericList<T>({
@@ -35,10 +35,14 @@ export function GenericList<T>({
   selects,
   emptyMessage = "Nenhum registro encontrado",
   emptyAction,
-  children
+  children,
+  aboveTable
 }: GenericListProps<T>) {
   return (
     <div className="space-y-6">
+      {aboveTable && (
+        <div>{aboveTable}</div>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">{title}</CardTitle>

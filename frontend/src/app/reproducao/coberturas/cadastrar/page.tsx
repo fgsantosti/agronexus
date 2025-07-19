@@ -50,14 +50,14 @@ export default function CadastroInseminacao() {
       fields: [
         {
           name: "animal",
-          label: "Animal *",
+          label: "Animal",
           type: "text",
           required: true,
           placeholder: "Pesquise por brinco, lote, número ou nome do animal",
         },
         {
           name: "categoria",
-          label: "Categoria *",
+          label: "Categoria",
           type: "select",
           required: true,
           options: [
@@ -76,14 +76,14 @@ export default function CadastroInseminacao() {
       fields: [
         {
           name: "data_inseminacao",
-          label: "Data *",
+          label: "Data",
           type: "text",
           required: true,
           placeholder: "Data da inseminação",
         },
         {
           name: "tipo",
-          label: "Tipo *",
+          label: "Tipo",
           type: "select",
           required: true,
           options: [
@@ -101,7 +101,7 @@ export default function CadastroInseminacao() {
       fields: [
         {
           name: "reprodutor",
-          label: "Reprodutor/Sêmen *",
+          label: "Reprodutor/Sêmen",
           type: "text",
           required: true,
           placeholder: "Ex: Touro 007 ou Sêmen ABC123",
@@ -115,7 +115,7 @@ export default function CadastroInseminacao() {
       fields: [
         {
           name: "estacao_monta",
-          label: "Estação de Monta *",
+          label: "Estação de Monta",
           type: "text",
           required: true,
           placeholder: "Ex: Estação 2025",

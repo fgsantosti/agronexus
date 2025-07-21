@@ -45,9 +45,6 @@ export default function EditarInseminacao() {
   return (
     <div className="max-w-2xl mx-auto py-6 space-y-6 px-4 md:px-0">
       <div className="flex items-center gap-4 mb-2">
-        <button type="button" className="flex items-center gap-2 text-sm px-3 py-2 border rounded" onClick={handleCancel}>
-          <ArrowLeft className="w-4 h-4" /> Voltar
-        </button>
         <div>
           <h1 className="text-2xl font-bold">Editar Inseminação</h1>
           <p className="text-muted-foreground">Altere os dados da inseminação ou cobertura.</p>

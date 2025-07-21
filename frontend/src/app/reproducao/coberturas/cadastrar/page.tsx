@@ -7,18 +7,18 @@ import { CadastroGenericoForm, GenericSection, GenericField } from "@/components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export default function CadastroInseminacao() {
+export default function CadastroInseminacao(props: any) {
   const router = useRouter();
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [form, setForm] = useState({
-    animal: "",
-    categoria: "",
-    data_inseminacao: "",
-    tipo: "",
-    reprodutor: "",
-    estacao_monta: "",
-  });
+  const [saving, setSaving] = useState(props.saving || false);
+  const [success, setSuccess] = useState(props.success || false);
+  const [form, setForm] = useState(() => ({
+    animal: props.initialData?.animal || "",
+    categoria: props.initialData?.categoria || "",
+    data_inseminacao: props.initialData?.data_inseminacao || "",
+    tipo: props.initialData?.tipo || "",
+    reprodutor: props.initialData?.reprodutor || "",
+    estacao_monta: props.initialData?.estacao_monta || "",
+  }));
   const [showAnimalSuggestions, setShowAnimalSuggestions] = useState(false);
   const [showReprodutorSuggestions, setShowReprodutorSuggestions] = useState(false);
 
@@ -27,6 +27,7 @@ export default function CadastroInseminacao() {
   }
 
   async function handleSubmit(data: Record<string, any>) {
+    if (props.onSubmit) return props.onSubmit(data);
     setSaving(true);
     setSuccess(true);
     setTimeout(() => {
@@ -37,6 +38,7 @@ export default function CadastroInseminacao() {
   }
 
   function handleCancel() {
+    if (props.onCancel) return props.onCancel();
     router.push("/reproducao/coberturas");
   }
 
@@ -228,15 +230,15 @@ export default function CadastroInseminacao() {
   return (
     <div className="max-w-2xl mx-auto py-6 space-y-6">
       <CadastroGenericoForm
-        title="Cadastro de Inseminação"
-        description="Preencha os dados para registrar uma nova inseminação ou cobertura."
+        title={props.initialData ? "" : "Cadastro de Inseminação"}
+        description={props.initialData ? "" : "Preencha os dados para registrar uma nova inseminação ou cobertura."}
         sections={sections}
         initialData={form}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         saving={saving}
-        submitLabel="Cadastrar"
-        cancelLabel="Cancelar"
+        submitLabel={props.submitLabel || "Cadastrar"}
+        cancelLabel={props.cancelLabel || "Cancelar"}
         // @ts-ignore
         renderCustomField={renderCustomField}
       />

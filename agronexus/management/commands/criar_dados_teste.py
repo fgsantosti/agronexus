@@ -404,10 +404,26 @@ class Command(BaseCommand):
 
     def criar_animais(self, propriedades, lotes, options):
         """Cria animais fictícios"""
+        from agronexus.models import EspecieAnimal, RacaAnimal
         self.stdout.write("🐂 Criando animais...")
 
         animais = []
         max_animais = options.get('animais', None)
+
+        # Buscar a espécie bovino
+        try:
+            especie_bovina = EspecieAnimal.objects.get(nome='bovino')
+        except EspecieAnimal.DoesNotExist:
+            self.stdout.write(self.style.ERROR(
+                "❌ Espécie 'bovino' não encontrada!"))
+            return []
+
+        racas_bovinos = list(RacaAnimal.objects.filter(
+            especie=especie_bovina, nome__in=self.RACAS_BOVINOS))
+        if not racas_bovinos:
+            self.stdout.write(self.style.ERROR(
+                "❌ Nenhuma raça bovina encontrada!"))
+            return []
 
         for propriedade in propriedades:
             lotes_propriedade = [
@@ -444,6 +460,8 @@ class Command(BaseCommand):
                     valor_compra = None
                     origem = ""
 
+                raca = random.choice(racas_bovinos)
+
                 animal = Animal.objects.create(
                     propriedade=propriedade,
                     identificacao_unica=(
@@ -453,7 +471,7 @@ class Command(BaseCommand):
                     nome_registro=f"Animal {i+1}" if i % 5 == 0 else "",
                     sexo=sexo,
                     data_nascimento=data_nascimento,
-                    raca=random.choice(self.RACAS_BOVINOS),
+                    raca=raca,
                     categoria=categoria,
                     status='ativo',
                     data_compra=data_compra,
@@ -553,15 +571,23 @@ class Command(BaseCommand):
         ]
 
         # Criar manejos variados
+
         for _ in range(100):  # 100 manejos aleatórios
             tipo = random.choice([
                 'vacinacao', 'medicamento', 'pesagem', 'outro'
             ])
             data_manejo = date.today() - timedelta(days=random.randint(0, 365))
 
-            # Selecionar animais aleatórios
+            # Só cria manejo se houver animais
+            if len(animais) == 0:
+                continue
+
+            n_animais = min(20, len(animais))
+            if n_animais == 0:
+                continue
+
             animais_manejo = random.sample(
-                animais, random.randint(1, min(20, len(animais)))
+                animais, random.randint(1, n_animais)
             )
             lote = random.choice(lotes)
 
@@ -628,7 +654,10 @@ class Command(BaseCommand):
         ]
 
         for _ in range(50):  # 50 vacinações
-            animais_vacinacao = random.sample(animais, random.randint(5, 30))
+            if len(animais) < 5:
+                continue
+            n_vacinacao = random.randint(5, min(30, len(animais)))
+            animais_vacinacao = random.sample(animais, n_vacinacao)
             propriedade = animais_vacinacao[0].propriedade
 
             # Selecionar uma vacina aleatória

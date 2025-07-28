@@ -1,14 +1,17 @@
 
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
+"use client"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 export default function withAuth(Component: any) {
-  return async function AuthenticatedPage(props: any) {
-    const cookieStore = await cookies();
-    const access = cookieStore.get("access")?.value;
-    if (!access) {
-      redirect("/login");
-    }
-    return <Component {...props} />;
+  return function AuthenticatedPage(props: any) {
+    const router = useRouter()
+    useEffect(() => {
+      const access = typeof window !== "undefined" ? localStorage.getItem("access") : null
+      if (!access) {
+        router.replace("/login")
+      }
+    }, [router])
+    return <Component {...props} />
   }
 }

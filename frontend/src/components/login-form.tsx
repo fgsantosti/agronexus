@@ -36,7 +36,19 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
     setFormError(null)
     const ok = await login(usuario, password)
     if (ok) {
-      router.push("/dashboard")
+      // Checa se o usuário possui propriedades
+      let propriedades: any[] = []
+      try {
+        const propStr = localStorage.getItem("propriedades")
+        if (propStr) {
+          propriedades = JSON.parse(propStr)
+        }
+      } catch {}
+      if (!propriedades || propriedades.length === 0) {
+        router.push("/propriedades/adicionar")
+      } else {
+        router.push("/dashboard")
+      }
     } else {
       setFormError("Usuário ou senha inválidos")
     }

@@ -17,8 +17,8 @@ from rest_framework.response import Response
 from ...models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
                        CalendarioSanitario, CategoriaFinanceira,
                        ConfiguracaoSistema, ContaFinanceira,
-                       DiagnosticoGestacao, EspecieAnimal, EstacaoMonta, HistoricoLoteAnimal,
-                       HistoricoOcupacaoArea, Inseminacao,
+                       DiagnosticoGestacao, EspecieAnimal, EstacaoMonta,
+                       HistoricoLoteAnimal, HistoricoOcupacaoArea, Inseminacao,
                        LancamentoFinanceiro, Lote, Manejo, Medicamento, Parto,
                        Pesagem, Propriedade, ProtocoloIATF, RacaAnimal,
                        RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
@@ -36,8 +36,7 @@ from .serializers import (AdministracaoMedicamentoSerializer, AnimalSerializer,
                           ConfiguracaoSistemaSerializer,
                           ContaFinanceiraSerializer,
                           DiagnosticoGestacaoSerializer,
-                          EspecieAnimalSerializer,
-                          EstacaoMontaSerializer,
+                          EspecieAnimalSerializer, EstacaoMontaSerializer,
                           HistoricoLoteAnimalSerializer,
                           HistoricoOcupacaoAreaSerializer,
                           InseminacaoSerializer,
@@ -107,9 +106,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def me(self, request):
-        """Retorna dados do usuário atual"""
+        """Retorna dados do usuário atual, incluindo propriedades"""
         serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
+        # Busca propriedades do usuário
+        propriedades = Propriedade.objects.filter(proprietario=request.user)
+        propriedades_data = PropriedadeSerializer(propriedades, many=True).data
+        data = serializer.data
+        data["propriedades"] = propriedades_data
+        return Response(data)
 
 
 class PropriedadeViewSet(BaseViewSet):

@@ -28,32 +28,86 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { usePropriedades, type Propriedade } from "@/hooks/usePropriedades"
 
-// Dados do AgroNexus
-const data = {
-  user: {
+// Mapeamento de ícones para propriedades
+const getPropriedadeIcon = (index: number) => {
+  const icons = [Home, Sprout, Heart, PieChart]
+  return icons[index % icons.length]
+}
+
+// Mapeamento de planos baseado na posição (primeira = mais recente = principal)
+const getPropriedadePlano = (propriedade: Propriedade, index: number) => {
+  // A primeira propriedade (mais recente) é sempre principal
+  if (index === 0) return "Principal"
+  // As demais são secundárias se ativas, senão inativas
+  if (propriedade.ativa) return "Secundária"
+  return "Inativa"
+}
+
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { propriedades, loading, error } = usePropriedades()
+
+  // Dados do usuário (mantido estático por enquanto)
+  const userData = {
     name: "João Silva",
     email: "joao@fazendaverde.com.br",
     avatar: "/avatars/user.jpg",
-  },
-  teams: [
-    {
-      name: "Fazenda Verde",
-      logo: Home,
-      plan: "Principal",
-    },
-    {
-      name: "Fazenda São João",
-      logo: Sprout,
-      plan: "Secundária",
-    },
-    {
-      name: "Sítio Esperança",
-      logo: Heart,
-      plan: "Parceria",
-    },
-  ],
-  navMain: [
+  }
+
+  // Converte propriedades da API para o formato esperado pelo TeamSwitcher
+  // Ordena por data de criação (mais recente primeiro) e prioriza propriedades reais da API
+  const teams = React.useMemo(() => {
+    console.log('Debug teams - propriedades.length:', propriedades.length)
+    console.log('Debug teams - loading:', loading)
+    console.log('Debug teams - propriedades:', propriedades)
+    
+    // Se tem propriedades da API, usa elas
+    if (propriedades.length > 0) {
+      // Ordena propriedades por data de criação (mais recente primeiro)
+      const propriedadesOrdenadas = [...propriedades].sort((a, b) => {
+        const dateA = new Date(a.data_criacao).getTime()
+        const dateB = new Date(b.data_criacao).getTime()
+        return dateB - dateA // Mais recente primeiro
+      })
+
+      console.log('Propriedades ordenadas:', propriedadesOrdenadas.map(p => ({ nome: p.nome, data: p.data_criacao })))
+
+      const teamsResult = propriedadesOrdenadas.map((propriedade, index) => ({
+        name: propriedade.nome,
+        logo: getPropriedadeIcon(index),
+        plan: loading ? "Atualizando..." : getPropriedadePlano(propriedade, index),
+      }))
+      
+      console.log('Teams result (da API):', teamsResult)
+      return teamsResult
+    }
+
+    // Dados de fallback apenas quando não há propriedades da API
+    const fallbackPropriedades = [
+      {
+        name: "Fazenda Verde",
+        logo: Home,
+        plan: "Principal",
+      },
+      {
+        name: "Fazenda São João", 
+        logo: Sprout,
+        plan: "Secundária",
+      },
+      {
+        name: "Sítio Esperança",
+        logo: Heart,
+        plan: "Parceria",
+      },
+    ]
+
+    console.log('Usando fallback:', fallbackPropriedades)
+    return fallbackPropriedades
+  }, [propriedades, loading])
+
+  // Dados de navegação (mantidos estáticos)
+  const navMain = [
     {
       title: "Dashboard",
       url: "/dashboard",
@@ -197,8 +251,9 @@ const data = {
         },
       ],
     },
-  ],
-  projects: [
+  ]
+
+  const projects = [
     {
       name: "Cadastrar Animal",
       url: "/rebanho",
@@ -219,21 +274,19 @@ const data = {
       url: "/relatorios/mensal",
       icon: FileText,
     },
-  ],
-}
+  ]
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavMain items={navMain} />
+        <NavProjects projects={projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

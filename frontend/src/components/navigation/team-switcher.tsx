@@ -31,7 +31,14 @@ export function TeamSwitcher({
   const { isMobile } = useSidebar()
   const [activeTeam, setActiveTeam] = React.useState(teams[0])
 
-  if (!activeTeam) {
+  // Atualiza o team ativo quando a lista de teams muda
+  React.useEffect(() => {
+    if (teams.length > 0) {
+      setActiveTeam(teams[0]) // Sempre seleciona o primeiro (mais recente)
+    }
+  }, [teams])
+
+  if (!activeTeam || teams.length === 0) {
     return null
   }
 

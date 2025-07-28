@@ -28,7 +28,8 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { usePropriedades, type Propriedade } from "@/hooks/usePropriedades"
+import { usePropriedadesContext } from "@/contexts/PropriedadesContext"
+import { type Propriedade } from "@/hooks/usePropriedades"
 
 // Mapeamento de ícones para propriedades
 const getPropriedadeIcon = (index: number) => {
@@ -46,22 +47,35 @@ const getPropriedadePlano = (propriedade: Propriedade, index: number) => {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { propriedades, loading, error } = usePropriedades()
+  const { propriedades, loading, error } = usePropriedadesContext()
+  const [isClient, setIsClient] = React.useState(false)
+
+  // Garante que só renderiza do lado cliente para evitar hidratação mismatch
+  React.useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Dados do usuário (mantido estático por enquanto)
   const userData = {
     name: "João Silva",
     email: "joao@fazendaverde.com.br",
-    avatar: "/avatars/user.jpg",
+    avatar: "", // Avatar vazio para usar as iniciais
   }
 
   // Converte propriedades da API para o formato esperado pelo TeamSwitcher
   // Ordena por data de criação (mais recente primeiro) e prioriza propriedades reais da API
   const teams = React.useMemo(() => {
-    console.log('Debug teams - propriedades.length:', propriedades.length)
-    console.log('Debug teams - loading:', loading)
-    console.log('Debug teams - propriedades:', propriedades)
-    
+    // Se ainda não é cliente, retorna dados de fallback para evitar hidratação mismatch
+    if (!isClient) {
+      return [
+        {
+          name: "Carregando...",
+          logo: Home,
+          plan: "...",
+        },
+      ]
+    }
+
     // Se tem propriedades da API, usa elas
     if (propriedades.length > 0) {
       // Ordena propriedades por data de criação (mais recente primeiro)
@@ -71,20 +85,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         return dateB - dateA // Mais recente primeiro
       })
 
-      console.log('Propriedades ordenadas:', propriedadesOrdenadas.map(p => ({ nome: p.nome, data: p.data_criacao })))
-
-      const teamsResult = propriedadesOrdenadas.map((propriedade, index) => ({
+      return propriedadesOrdenadas.map((propriedade, index) => ({
         name: propriedade.nome,
         logo: getPropriedadeIcon(index),
         plan: loading ? "Atualizando..." : getPropriedadePlano(propriedade, index),
+        id: propriedade.id, // Adiciona o ID da propriedade
       }))
-      
-      console.log('Teams result (da API):', teamsResult)
-      return teamsResult
     }
 
     // Dados de fallback apenas quando não há propriedades da API
-    const fallbackPropriedades = [
+    return [
       {
         name: "Fazenda Verde",
         logo: Home,
@@ -101,10 +111,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         plan: "Parceria",
       },
     ]
-
-    console.log('Usando fallback:', fallbackPropriedades)
-    return fallbackPropriedades
-  }, [propriedades, loading])
+  }, [propriedades, loading, isClient])
 
   // Dados de navegação (mantidos estáticos)
   const navMain = [

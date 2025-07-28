@@ -58,7 +58,64 @@ export function useAuth() {
     localStorage.removeItem('refresh')
     localStorage.removeItem('user')
     localStorage.removeItem('propriedades')
+    Cookies.remove('access')
+    Cookies.remove('refresh')
   }
 
-  return { user, propriedades, access, refresh, loading, error, login, logout }
+  const handleAuthError = () => {
+    console.warn('Token inválido ou expirado. Fazendo logout...')
+    logout()
+  }
+
+  const isAuthenticated = () => {
+    if (typeof window === "undefined") return false
+    return !!localStorage.getItem('access')
+  }
+
+  const getAuthHeaders = (): Record<string, string> => {
+    if (typeof window === "undefined") return {
+      'Content-Type': 'application/json',
+    }
+    
+    const token = localStorage.getItem('access')
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    }
+  }
+
+  const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+    const authHeaders = getAuthHeaders()
+    const headers = {
+      ...authHeaders,
+      ...(options.headers as Record<string, string> || {}),
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    })
+
+    if (response.status === 401) {
+      handleAuthError()
+      throw new Error('Token inválido ou expirado')
+    }
+
+    return response
+  }
+
+  return { 
+    user, 
+    propriedades, 
+    access, 
+    refresh, 
+    loading, 
+    error, 
+    login, 
+    logout, 
+    handleAuthError,
+    isAuthenticated,
+    getAuthHeaders,
+    makeAuthenticatedRequest,
+  }
 }

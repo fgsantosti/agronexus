@@ -1,5 +1,5 @@
-import DashboardPage from './dashboard-layout'
+import { redirect } from 'next/navigation'
 
 export default function Home() {
-  return <DashboardPage />
+  redirect('/dashboard')
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from './useAuth'
 
 export interface Propriedade {
   id: string
@@ -27,14 +28,7 @@ export function usePropriedades() {
   const [propriedades, setPropriedades] = useState<Propriedade[]>([])
   const [loading, setLoading] = useState(true) // Inicializa como true para mostrar loading inicial
   const [error, setError] = useState<string | null>(null)
-
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('access')
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
-    }
-  }
+  const { handleAuthError, getAuthHeaders, isAuthenticated } = useAuth()
 
   const fetchPropriedades = async () => {
     setLoading(true)
@@ -47,6 +41,12 @@ export function usePropriedades() {
           headers: getAuthHeaders(),
         }
       )
+      
+      if (response.status === 401) {
+        // Token inválido ou expirado
+        handleAuthError()
+        return
+      }
       
       if (!response.ok) {
         throw new Error(`Erro ${response.status}: ${response.statusText}`)
@@ -67,9 +67,8 @@ export function usePropriedades() {
   }
 
   useEffect(() => {
-    // Só busca se tiver token de autenticação
-    const token = localStorage.getItem('access')
-    if (token) {
+    // Só busca se estiver autenticado
+    if (isAuthenticated()) {
       fetchPropriedades()
     } else {
       setLoading(false) // Para de carregar se não tiver token

@@ -179,8 +179,33 @@ SIMPLE_JWT = {
 
 # CORS Settings
 CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS', default='http://localhost:3000', cast=Csv())
+    'CORS_ALLOWED_ORIGINS',
+    default=(
+        'http://localhost:3000,'
+        'http://localhost:3001,'
+        'http://127.0.0.1:3000,'
+        'http://127.0.0.1:3001,'
+        'http://127.0.0.1:64281,'
+        'http://localhost:64281'
+    ),
+    cast=Csv()
+)
 CORS_ALLOW_CREDENTIALS = True
+
+# Configurações adicionais do CORS para desenvolvimento com Flutter Web
+CORS_ALLOW_ALL_ORIGINS = config(
+    'CORS_ALLOW_ALL_ORIGINS', default=DEBUG, cast=bool)
+CORS_ALLOWED_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # API Documentation
 SPECTACULAR_SETTINGS = {

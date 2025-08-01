@@ -68,7 +68,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--usuarios',
             type=int,
-            default=None,
+            default=3,
             help='Número de usuários proprietários a criar (padrão: 3)',
         )
         parser.add_argument(
@@ -464,6 +464,7 @@ class Command(BaseCommand):
 
                 animal = Animal.objects.create(
                     propriedade=propriedade,
+                    especie=especie_bovina,
                     identificacao_unica=(
                         f"{propriedade.nome[:3].upper()}{i+1:04d}-"
                         f"{random.randint(1000, 9999)}"

@@ -22,8 +22,9 @@ from agronexus.models import (
     Pesagem, Vacinacao, Medicamento, Inseminacao, DiagnosticoGestacao,
     Parto, LancamentoFinanceiro, CalendarioSanitario, Vacina,
     HistoricoLoteAnimal, HistoricoOcupacaoArea, AdministracaoMedicamento,
-    ContaFinanceira, CategoriaFinanceira
+    ContaFinanceira, CategoriaFinanceira, EspecieAnimal, RacaAnimal
 )
+from django.contrib.auth.models import Group
 
 # Dados fictícios para usar
 NOMES_PROPRIEDADES = [
@@ -66,11 +67,74 @@ VACINAS = [
     "Clostridioses", "IBR/BVD", "Leptospirose"
 ]
 
+def criar_grupos():
+    """Cria os grupos de perfis necessários"""
+    print("👥 Criando grupos de perfis...")
+    
+    perfis = ['Proprietário', 'Gerente', 'Funcionário', 'Veterinário']
+    grupos_criados = []
+    
+    for perfil in perfis:
+        grupo, created = Group.objects.get_or_create(name=perfil)
+        grupos_criados.append(grupo)
+        if created:
+            print(f"   ✅ Grupo '{perfil}' criado")
+        else:
+            print(f"   ↪️  Grupo '{perfil}' já existe")
+    
+    return grupos_criados
+
+def criar_especies_e_racas():
+    """Cria espécies e raças de animais"""
+    print("🐄 Criando espécies e raças...")
+    
+    # Criar espécie bovina se não existir
+    especie_bovino, created = EspecieAnimal.objects.get_or_create(
+        nome='bovino',
+        defaults={
+            'nome_display': 'Bovino',
+            'peso_ua_referencia': 450,
+            'periodo_gestacao_dias': 285,
+            'idade_primeira_cobertura_meses': 24
+        }
+    )
+    
+    # Criar raças bovinas
+    racas_bovinas = [
+        "Nelore", "Angus", "Hereford", "Brahman", "Senepol", "Simmental",
+        "Charolês", "Limousin", "Gir", "Guzerá", "Tabapuã", "Canchim"
+    ]
+    
+    racas_criadas = []
+    for nome_raca in racas_bovinas:
+        raca, created = RacaAnimal.objects.get_or_create(
+            especie=especie_bovino,
+            nome=nome_raca,
+            defaults={
+                'origem': 'Brasil',
+                'caracteristicas': f'Raça {nome_raca} com características específicas'
+            }
+        )
+        racas_criadas.append(raca)
+        if created:
+            print(f"   ✅ Raça {nome_raca} criada")
+        else:
+            print(f"   ↪️  Raça {nome_raca} já existe")
+    
+    print(f"✅ Espécie e {len(racas_criadas)} raças processadas")
+    return especie_bovino, racas_criadas
+
 def criar_usuarios():
     """Cria usuários fictícios"""
     print("📤 Criando usuários...")
     
     usuarios = []
+    
+    # Buscar grupos
+    grupo_proprietario = Group.objects.get(name='Proprietário')
+    grupo_gerente = Group.objects.get(name='Gerente')
+    grupo_funcionario = Group.objects.get(name='Funcionário')
+    grupo_veterinario = Group.objects.get(name='Veterinário')
     
     # Proprietários
     for i in range(3):
@@ -82,14 +146,16 @@ def criar_usuarios():
                 password="123456",
                 first_name=f"João{i+1}",
                 last_name=f"Silva{i+1}",
-                perfil="proprietario",
                 telefone=f"(11) 9999-{1000+i:04d}",
                 cpf=f"123.456.789-{10+i:02d}",
                 data_nascimento=date(1970+i, 1, 15)
             )
+            usuario.groups.add(grupo_proprietario)
             usuarios.append(usuario)
         else:
             usuario = Usuario.objects.get(username=username)
+            if not usuario.groups.filter(name='Proprietário').exists():
+                usuario.groups.add(grupo_proprietario)
             usuarios.append(usuario)
     
     # Gerentes
@@ -102,14 +168,16 @@ def criar_usuarios():
                 password="123456",
                 first_name=f"Maria{i+1}",
                 last_name=f"Santos{i+1}",
-                perfil="gerente",
                 telefone=f"(11) 8888-{1000+i:04d}",
                 cpf=f"987.654.321-{10+i:02d}",
                 data_nascimento=date(1980+i, 3, 20)
             )
+            usuario.groups.add(grupo_gerente)
             usuarios.append(usuario)
         else:
             usuario = Usuario.objects.get(username=username)
+            if not usuario.groups.filter(name='Gerente').exists():
+                usuario.groups.add(grupo_gerente)
             usuarios.append(usuario)
     
     # Funcionários
@@ -122,14 +190,16 @@ def criar_usuarios():
                 password="123456",
                 first_name=f"Pedro{i+1}",
                 last_name=f"Costa{i+1}",
-                perfil="funcionario",
                 telefone=f"(11) 7777-{1000+i:04d}",
                 cpf=f"456.789.123-{10+i:02d}",
                 data_nascimento=date(1985+i, 6, 10)
             )
+            usuario.groups.add(grupo_funcionario)
             usuarios.append(usuario)
         else:
             usuario = Usuario.objects.get(username=username)
+            if not usuario.groups.filter(name='Funcionário').exists():
+                usuario.groups.add(grupo_funcionario)
             usuarios.append(usuario)
     
     # Veterinários
@@ -142,14 +212,16 @@ def criar_usuarios():
                 password="123456",
                 first_name=f"Ana{i+1}",
                 last_name=f"Oliveira{i+1}",
-                perfil="veterinario",
                 telefone=f"(11) 6666-{1000+i:04d}",
                 cpf=f"789.123.456-{10+i:02d}",
                 data_nascimento=date(1982+i, 9, 5)
             )
+            usuario.groups.add(grupo_veterinario)
             usuarios.append(usuario)
         else:
             usuario = Usuario.objects.get(username=username)
+            if not usuario.groups.filter(name='Veterinário').exists():
+                usuario.groups.add(grupo_veterinario)
             usuarios.append(usuario)
     
     print(f"✅ {len(usuarios)} usuários processados")
@@ -160,7 +232,7 @@ def criar_propriedades(usuarios):
     print("🏠 Criando propriedades...")
     
     propriedades = []
-    proprietarios = [u for u in usuarios if u.perfil == 'proprietario']
+    proprietarios = [u for u in usuarios if u.groups.filter(name='Proprietário').exists()]
     
     for i, proprietario in enumerate(proprietarios):
         for j in range(2):  # 2 propriedades por proprietário
@@ -243,7 +315,7 @@ def criar_lotes(propriedades, areas):
     print(f"✅ {len(lotes)} lotes criados")
     return lotes
 
-def criar_animais(propriedades, lotes):
+def criar_animais(propriedades, lotes, especie_bovino, racas_bovinas):
     """Cria animais fictícios"""
     print("🐂 Criando animais...")
     
@@ -268,11 +340,12 @@ def criar_animais(propriedades, lotes):
             
             animal = Animal.objects.create(
                 propriedade=propriedade,
+                especie=especie_bovino,
                 identificacao_unica=f"{propriedade.nome[:3].upper()}{i+1:04d}-{random.randint(1000, 9999)}",
                 nome_registro=f"Animal {i+1}" if i % 5 == 0 else "",
                 sexo=sexo,
                 data_nascimento=data_nascimento,
-                raca=random.choice(RACAS_BOVINOS),
+                raca=random.choice(racas_bovinas),
                 categoria=categoria,
                 status='ativo',
                 data_compra=data_nascimento + timedelta(days=random.randint(0, 30)) if random.random() < 0.3 else None,
@@ -291,7 +364,7 @@ def criar_pesagens(animais, usuarios):
     print("⚖️ Criando pesagens...")
     
     pesagens = []
-    funcionarios = [u for u in usuarios if u.perfil in ['funcionario', 'gerente']]
+    funcionarios = [u for u in usuarios if u.groups.filter(name__in=['Funcionário', 'Gerente']).exists()]
     
     for animal in animais:
         # Criar 2-3 pesagens para cada animal
@@ -344,7 +417,7 @@ def criar_manejos(animais, lotes, usuarios):
     print("🏥 Criando manejos...")
     
     manejos = []
-    funcionarios = [u for u in usuarios if u.perfil in ['funcionario', 'gerente', 'veterinario']]
+    funcionarios = [u for u in usuarios if u.groups.filter(name__in=['Funcionário', 'Gerente', 'Veterinário']).exists()]
     
     # Criar manejos variados
     for _ in range(100):  # 100 manejos aleatórios
@@ -404,7 +477,7 @@ def criar_vacinacoes(animais, usuarios):
             vacinas.append(vacina)
     
     vacinacoes = []
-    veterinarios = [u for u in usuarios if u.perfil in ['veterinario', 'funcionario']]
+    veterinarios = [u for u in usuarios if u.groups.filter(name__in=['Veterinário', 'Funcionário']).exists()]
     
     for _ in range(50):  # 50 vacinações
         animais_vacinacao = random.sample(animais, random.randint(5, 30))
@@ -527,7 +600,7 @@ def main():
     print("=" * 60)
     
     # Verificar se já existem dados
-    if Usuario.objects.filter(perfil='proprietario').exists():
+    if Usuario.objects.filter(groups__name='Proprietário').exists():
         resposta = input("⚠️  Já existem dados no sistema. Continuar? (s/N): ")
         if resposta.lower() != 's':
             print("❌ Operação cancelada")
@@ -535,11 +608,13 @@ def main():
     
     try:
         # Criar dados em ordem de dependência
+        grupos = criar_grupos()
+        especie_bovino, racas_bovinas = criar_especies_e_racas()
         usuarios = criar_usuarios()
         propriedades = criar_propriedades(usuarios)
         areas = criar_areas(propriedades)
         lotes = criar_lotes(propriedades, areas)
-        animais = criar_animais(propriedades, lotes)
+        animais = criar_animais(propriedades, lotes, especie_bovino, racas_bovinas)
         pesagens = criar_pesagens(animais, usuarios)
         manejos = criar_manejos(animais, lotes, usuarios)
         vacinacoes = criar_vacinacoes(animais, usuarios)

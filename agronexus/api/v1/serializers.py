@@ -455,6 +455,12 @@ class InseminacaoSerializer(serializers.ModelSerializer):
     estacao_monta_id = serializers.UUIDField(
         write_only=True, required=False, allow_null=True)
     data_diagnostico_prevista = serializers.DateField(read_only=True)
+    
+    # Campos de custo do manejo
+    custo_material = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, default=0, write_only=True)
+    custo_pessoal = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, default=0, write_only=True)
 
     class Meta:
         model = Inseminacao
@@ -462,9 +468,52 @@ class InseminacaoSerializer(serializers.ModelSerializer):
             'id', 'animal', 'animal_id', 'manejo', 'data_inseminacao', 'tipo',
             'reprodutor', 'reprodutor_id', 'semen_utilizado', 'protocolo_iatf',
             'protocolo_iatf_id', 'estacao_monta', 'estacao_monta_id', 'observacoes',
-            'data_diagnostico_prevista'
+            'data_diagnostico_prevista', 'custo_material', 'custo_pessoal'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'data_diagnostico_prevista']
+
+    def validate(self, data):
+        """Validações personalizadas"""
+        # Validar se o animal é fêmea (para ser inseminado)
+        animal_id = data.get('animal_id')
+        if animal_id:
+            try:
+                from ...models import Animal
+                animal = Animal.objects.get(id=animal_id)
+                if animal.sexo != 'femea':
+                    raise serializers.ValidationError(
+                        {'animal_id': 'Apenas fêmeas podem ser inseminadas'})
+            except Animal.DoesNotExist:
+                raise serializers.ValidationError(
+                    {'animal_id': 'Animal não encontrado'})
+
+        # Validar se o reprodutor é macho (quando informado)
+        reprodutor_id = data.get('reprodutor_id')
+        if reprodutor_id:
+            try:
+                from ...models import Animal
+                reprodutor = Animal.objects.get(id=reprodutor_id)
+                if reprodutor.sexo != 'macho':
+                    raise serializers.ValidationError(
+                        {'reprodutor_id': 'Reprodutor deve ser macho'})
+            except Animal.DoesNotExist:
+                raise serializers.ValidationError(
+                    {'reprodutor_id': 'Reprodutor não encontrado'})
+
+        # Validar data da inseminação
+        data_inseminacao = data.get('data_inseminacao')
+        if data_inseminacao and data_inseminacao > timezone.now().date():
+            raise serializers.ValidationError(
+                {'data_inseminacao': 'Data da inseminação não pode ser futura'})
+
+        return data
+
+    def to_representation(self, instance):
+        """Adiciona campos calculados na representação"""
+        data = super().to_representation(instance)
+        if instance:
+            data['data_diagnostico_prevista'] = instance.get_data_diagnostico_prevista()
+        return data
 
 
 class DiagnosticoGestacaoSerializer(serializers.ModelSerializer):

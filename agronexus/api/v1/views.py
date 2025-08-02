@@ -5,6 +5,7 @@ ViewSets para API REST
 
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError
 from django.db.models import Avg, Count, F, Q, Sum
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -659,6 +660,150 @@ class InseminacaoViewSet(BaseViewSet):
             'animal', 'manejo', 'reprodutor', 'protocolo_iatf', 'estacao_monta'
         ).filter(animal__propriedade__proprietario=self.request.user)
 
+    def perform_create(self, serializer):
+        """Cria o manejo relacionado automaticamente"""
+        from ..models import Manejo, AnimalManejo
+        
+        # Validar se o animal pertence ao usuário
+        animal_id = serializer.validated_data.get('animal_id')
+        try:
+            animal = Animal.objects.get(
+                id=animal_id,
+                propriedade__proprietario=self.request.user
+            )
+        except Animal.DoesNotExist:
+            raise ValidationError("Animal não encontrado ou não pertence ao usuário")
+        
+        # Criar o manejo primeiro
+        manejo = Manejo.objects.create(
+            propriedade=animal.propriedade,
+            tipo='inseminacao',
+            data_manejo=serializer.validated_data['data_inseminacao'],
+            custo_material=serializer.validated_data.get('custo_material', 0),
+            custo_pessoal=serializer.validated_data.get('custo_pessoal', 0),
+            observacoes=serializer.validated_data.get('observacoes', ''),
+            usuario=self.request.user
+        )
+        
+        # Criar a inseminação com o manejo
+        inseminacao = serializer.save(manejo=manejo, animal=animal)
+        
+        # Relacionar o animal com o manejo
+        AnimalManejo.objects.create(
+            animal=animal,
+            manejo=manejo
+        )
+
+    @action(detail=False, methods=['get'])
+    def opcoes_cadastro(self, request):
+        """Retorna dados necessários para cadastro de inseminação"""
+        # Animais fêmeas do usuário
+        femeas = Animal.objects.filter(
+            propriedade__proprietario=request.user,
+            sexo='F',
+            status='ativo'
+        ).values('id', 'identificacao_unica', 'nome_registro')
+
+        # Reprodutores machos do usuário
+        reprodutores = Animal.objects.filter(
+            propriedade__proprietario=request.user,
+            sexo='M',
+            status='ativo'
+        ).values('id', 'identificacao_unica', 'nome_registro')
+
+        # Protocolos IATF
+        protocolos = ProtocoloIATF.objects.filter(
+            propriedade__proprietario=request.user
+        ).values('id', 'nome', 'descricao')
+
+        # Estações de monta ativas
+        estacoes = EstacaoMonta.objects.filter(
+            propriedade__proprietario=request.user,
+            ativa=True
+        ).values('id', 'nome', 'data_inicio', 'data_fim')
+
+        return Response({
+            'femeas': list(femeas),
+            'reprodutores': list(reprodutores),
+            'protocolos_iatf': list(protocolos),
+            'estacoes_monta': list(estacoes),
+            'tipos_inseminacao': [
+                {'value': 'natural', 'label': 'Monta Natural'},
+                {'value': 'ia', 'label': 'Inseminação Artificial'},
+                {'value': 'iatf', 'label': 'IATF'},
+            ]
+        })
+
+    @action(detail=False, methods=['get'])
+    def estatisticas_reproducao(self, request):
+        """Estatísticas gerais de reprodução"""
+        from datetime import datetime
+        
+        # Parâmetros de data
+        data_inicio = request.query_params.get('data_inicio')
+        data_fim = request.query_params.get('data_fim')
+        
+        # Se não fornecidas, usar o ano atual
+        if not data_inicio:
+            data_inicio = f"{datetime.now().year}-01-01"
+        if not data_fim:
+            data_fim = f"{datetime.now().year}-12-31"
+        
+        # QuerySet base filtrado por período
+        queryset = self.get_queryset().filter(
+            data_inseminacao__range=[data_inicio, data_fim]
+        )
+        
+        # Contar inseminações
+        total_inseminacoes = queryset.count()
+        
+        # Diagnósticos positivos
+        diagnosticos_positivos = DiagnosticoGestacao.objects.filter(
+            inseminacao__in=queryset,
+            resultado='positivo'
+        ).count()
+        
+        # Partos realizados
+        partos_vivos = Parto.objects.filter(
+            mae__propriedade__proprietario=self.request.user,
+            data_parto__range=[data_inicio, data_fim],
+            resultado='nascido_vivo'
+        ).count()
+        
+        # Taxa de prenhez
+        taxa_prenhez = 0
+        if total_inseminacoes > 0:
+            taxa_prenhez = round((diagnosticos_positivos / total_inseminacoes) * 100, 1)
+        
+        return Response({
+            'inseminacoes': total_inseminacoes,
+            'diagnosticos_positivos': diagnosticos_positivos,
+            'partos_vivos': partos_vivos,
+            'taxa_prenhez': taxa_prenhez,
+            'periodo': {
+                'data_inicio': data_inicio,
+                'data_fim': data_fim
+            }
+        })
+
+    @action(detail=False, methods=['get'])
+    def pendentes_diagnostico(self, request):
+        """Inseminações pendentes de diagnóstico"""
+        from datetime import datetime, timedelta
+        
+        # Inseminações dos últimos 30-60 dias que não têm diagnóstico
+        data_limite_inicio = datetime.now().date() - timedelta(days=60)
+        data_limite_fim = datetime.now().date() - timedelta(days=30)
+        
+        queryset = self.get_queryset().filter(
+            data_inseminacao__range=[data_limite_inicio, data_limite_fim]
+        ).exclude(
+            diagnosticos__isnull=False
+        )
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 class DiagnosticoGestacaoViewSet(BaseViewSet):
     """ViewSet para diagnósticos de gestação"""
@@ -674,6 +819,26 @@ class DiagnosticoGestacaoViewSet(BaseViewSet):
         return super().get_queryset().select_related(
             'inseminacao', 'manejo'
         ).filter(inseminacao__animal__propriedade__proprietario=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def pendentes_parto(self, request):
+        """Gestações pendentes de parto"""
+        from datetime import datetime, timedelta
+        
+        # Diagnósticos positivos com parto previsto nos próximos 30 dias
+        data_limite = datetime.now().date() + timedelta(days=30)
+        
+        queryset = self.get_queryset().filter(
+            resultado='positivo',
+            data_parto_prevista__lte=data_limite,
+            data_parto_prevista__gte=datetime.now().date()
+        ).exclude(
+            # Excluir os que já tiveram parto registrado
+            inseminacao__animal__partos_mae__data_parto__isnull=False
+        )
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class PartoViewSet(BaseViewSet):

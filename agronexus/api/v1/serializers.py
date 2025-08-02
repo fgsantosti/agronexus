@@ -455,12 +455,6 @@ class InseminacaoSerializer(serializers.ModelSerializer):
     estacao_monta_id = serializers.UUIDField(
         write_only=True, required=False, allow_null=True)
     data_diagnostico_prevista = serializers.DateField(read_only=True)
-    
-    # Campos de custo do manejo
-    custo_material = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, default=0, write_only=True)
-    custo_pessoal = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, default=0, write_only=True)
 
     class Meta:
         model = Inseminacao
@@ -468,7 +462,7 @@ class InseminacaoSerializer(serializers.ModelSerializer):
             'id', 'animal', 'animal_id', 'manejo', 'data_inseminacao', 'tipo',
             'reprodutor', 'reprodutor_id', 'semen_utilizado', 'protocolo_iatf',
             'protocolo_iatf_id', 'estacao_monta', 'estacao_monta_id', 'observacoes',
-            'data_diagnostico_prevista', 'custo_material', 'custo_pessoal'
+            'data_diagnostico_prevista'
         ]
         read_only_fields = ['id', 'data_diagnostico_prevista']
 
@@ -480,7 +474,7 @@ class InseminacaoSerializer(serializers.ModelSerializer):
             try:
                 from ...models import Animal
                 animal = Animal.objects.get(id=animal_id)
-                if animal.sexo != 'femea':
+                if animal.sexo != 'F':
                     raise serializers.ValidationError(
                         {'animal_id': 'Apenas fêmeas podem ser inseminadas'})
             except Animal.DoesNotExist:
@@ -493,7 +487,7 @@ class InseminacaoSerializer(serializers.ModelSerializer):
             try:
                 from ...models import Animal
                 reprodutor = Animal.objects.get(id=reprodutor_id)
-                if reprodutor.sexo != 'macho':
+                if reprodutor.sexo != 'M':
                     raise serializers.ValidationError(
                         {'reprodutor_id': 'Reprodutor deve ser macho'})
             except Animal.DoesNotExist:

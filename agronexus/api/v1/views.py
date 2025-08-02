@@ -662,7 +662,7 @@ class InseminacaoViewSet(BaseViewSet):
 
     def perform_create(self, serializer):
         """Cria o manejo relacionado automaticamente"""
-        from ..models import Manejo, AnimalManejo
+        from ...models import Manejo, AnimalManejo
         
         # Validar se o animal pertence ao usuário
         animal_id = serializer.validated_data.get('animal_id')
@@ -679,8 +679,6 @@ class InseminacaoViewSet(BaseViewSet):
             propriedade=animal.propriedade,
             tipo='inseminacao',
             data_manejo=serializer.validated_data['data_inseminacao'],
-            custo_material=serializer.validated_data.get('custo_material', 0),
-            custo_pessoal=serializer.validated_data.get('custo_pessoal', 0),
             observacoes=serializer.validated_data.get('observacoes', ''),
             usuario=self.request.user
         )
@@ -697,19 +695,19 @@ class InseminacaoViewSet(BaseViewSet):
     @action(detail=False, methods=['get'])
     def opcoes_cadastro(self, request):
         """Retorna dados necessários para cadastro de inseminação"""
-        # Animais fêmeas do usuário
+        # Animais fêmeas do usuário (limitado a 50 para melhor performance)
         femeas = Animal.objects.filter(
             propriedade__proprietario=request.user,
             sexo='F',
             status='ativo'
-        ).values('id', 'identificacao_unica', 'nome_registro')
+        ).values('id', 'identificacao_unica', 'nome_registro', 'sexo', 'data_nascimento', 'categoria').order_by('identificacao_unica')[:50]
 
-        # Reprodutores machos do usuário
+        # Reprodutores machos do usuário (limitado a 20)
         reprodutores = Animal.objects.filter(
             propriedade__proprietario=request.user,
             sexo='M',
             status='ativo'
-        ).values('id', 'identificacao_unica', 'nome_registro')
+        ).values('id', 'identificacao_unica', 'nome_registro', 'sexo', 'data_nascimento', 'categoria').order_by('identificacao_unica')[:20]
 
         # Protocolos IATF
         protocolos = ProtocoloIATF.objects.filter(

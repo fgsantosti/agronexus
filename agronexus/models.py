@@ -108,8 +108,8 @@ class Propriedade(models.Model):
         max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     coordenadas_gps = models.JSONField(
         blank=True, null=True, help_text="Coordenadas geográficas da propriedade")
-    inscricao_estadual = models.CharField(max_length=50, blank=True)
-    cnpj_cpf = models.CharField(max_length=18, blank=True)
+    inscricao_estadual = models.CharField(max_length=50, blank=True, null=True)
+    cnpj_cpf = models.CharField(max_length=18, blank=True, null=True)
     ativa = models.BooleanField(default=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
 

@@ -333,6 +333,22 @@ class Animal(models.Model):
         ('vaca', 'Vaca'),
     ]
 
+    ORIGEM_CHOICES = [
+        ('proprio', 'Proprio'),
+        ('compra', 'Compra'),
+        ('leilao', 'Leilão'),
+        ('doacao', 'Doação'),
+        ('parceria', 'Parceria'),
+    ]
+
+    DESTINO_CHOICES = [
+        ('venda_mercado', 'Venda para Mercado'),
+        ('venda_leilao', 'Venda em Leilão'),
+        ('abate', 'Abate'),
+        ('doacao', 'Doação'),
+        ('outro', 'Outro'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Espécie e raça
@@ -352,7 +368,7 @@ class Animal(models.Model):
     nome_registro = models.CharField(max_length=100, blank=True)
     sexo = models.CharField(max_length=1, choices=SEXO_CHOICES)
     data_nascimento = models.DateField()
-    categoria = models.CharField(max_length=20)  # Removido choices fixos
+    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='ativo')
 
@@ -366,13 +382,13 @@ class Animal(models.Model):
     data_compra = models.DateField(blank=True, null=True)
     valor_compra = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True)
-    origem = models.CharField(max_length=200, blank=True)
+    origem = models.CharField(max_length=200, blank=True, choices=ORIGEM_CHOICES)
 
     # Dados de venda
     data_venda = models.DateField(blank=True, null=True)
     valor_venda = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True)
-    destino = models.CharField(max_length=200, blank=True)
+    destino = models.CharField(max_length=200, blank=True, choices=DESTINO_CHOICES)
 
     # Dados de morte
     data_morte = models.DateField(blank=True, null=True)

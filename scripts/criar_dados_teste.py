@@ -84,6 +84,27 @@ def criar_grupos():
     
     return grupos_criados
 
+def criar_superusuario():
+    """Cria o superusuário admin"""
+    print("👑 Criando superusuário...")
+    
+    if not Usuario.objects.filter(username='admin').exists():
+        admin = Usuario.objects.create_superuser(
+            username='admin',
+            email='admin@agronexus.com',
+            password='admin123',
+            first_name='Administrador',
+            last_name='Sistema',
+            telefone='(11) 99999-9999',
+            cpf='000.000.000-00'
+        )
+        print("   ✅ Superusuário 'admin' criado")
+        return admin
+    else:
+        admin = Usuario.objects.get(username='admin')
+        print("   ↪️  Superusuário 'admin' já existe")
+        return admin
+
 def criar_especies_e_racas():
     """Cria espécies e raças de animais"""
     print("🐄 Criando espécies e raças...")
@@ -608,6 +629,7 @@ def main():
     
     try:
         # Criar dados em ordem de dependência
+        admin = criar_superusuario()
         grupos = criar_grupos()
         especie_bovino, racas_bovinas = criar_especies_e_racas()
         usuarios = criar_usuarios()
@@ -623,7 +645,8 @@ def main():
         print("=" * 60)
         print("✅ DADOS CRIADOS COM SUCESSO!")
         print("=" * 60)
-        print(f"👥 Usuários: {len(usuarios)}")
+        print(f"� Superusuário: 1 (admin)")
+        print(f"�👥 Usuários: {len(usuarios)}")
         print(f"🏠 Propriedades: {len(propriedades)}")
         print(f"🌱 Áreas: {len(areas)}")
         print(f"🐄 Lotes: {len(lotes)}")

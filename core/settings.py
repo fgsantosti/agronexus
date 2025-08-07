@@ -18,8 +18,13 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config(
+'''ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+'''
+
+ALLOWED_HOSTS = ['192.168.0.104', 'localhost', '127.0.0.1', '10.0.2.2']
+
+
 
 # Application definition
 DJANGO_APPS = [

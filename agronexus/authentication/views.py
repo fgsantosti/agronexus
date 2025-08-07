@@ -20,6 +20,7 @@ from rest_framework_simplejwt.views import (TokenObtainPairView,
 
 from ..api.v1.serializers import UsuarioSerializer
 from ..models import Propriedade, Usuario
+from .registro import RegistroPublicoView
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):

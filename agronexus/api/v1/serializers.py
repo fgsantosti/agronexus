@@ -330,7 +330,10 @@ class LoteSerializer(serializers.ModelSerializer):
         model = Lote
         fields = [
             'id', 'propriedade', 'propriedade_id', 'nome', 'descricao', 'criterio_agrupamento',
-            'area_atual', 'area_atual_id', 'ativo', 'data_criacao', 'total_animais', 'total_ua',
+            'area_atual', 'area_atual_id',
+            # Campos de características adicionados
+            'aptidao', 'finalidade', 'sistema_criacao',
+            'ativo', 'data_criacao', 'total_animais', 'total_ua',
             'peso_medio', 'gmd_medio'
         ]
         read_only_fields = ['id', 'data_criacao']

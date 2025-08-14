@@ -5,7 +5,6 @@ Serializers para API REST
 
 from datetime import date, timedelta
 from decimal import Decimal
-
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -19,7 +18,7 @@ from ...models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
                        HistoricoOcupacaoArea, Inseminacao,
                        LancamentoFinanceiro, Lote, Manejo, Medicamento, Parto,
                        Pesagem, Propriedade, ProtocoloIATF, RacaAnimal,
-                       RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
+                       RelatorioPersonalizado, Usuario, Vacina, Vacinacao,Inseminacao)
 
 # ============================================================================
 # SERIALIZERS DE USUÁRIOS E AUTENTICAÇÃO
@@ -527,6 +526,32 @@ class DiagnosticoGestacaoSerializer(serializers.ModelSerializer):
             'resultado', 'metodo', 'observacoes', 'data_parto_prevista'
         ]
         read_only_fields = ['id']
+
+    def create(self, validated_data):
+        """Cria o diagnóstico e seu manejo associado automaticamente"""
+        
+        # Extrair dados para o manejo
+        inseminacao_id = validated_data['inseminacao_id']
+        inseminacao = Inseminacao.objects.get(id=inseminacao_id)
+        data_diagnostico = validated_data['data_diagnostico']
+        
+        # Criar o manejo primeiro
+        manejo = Manejo.objects.create(
+            propriedade=inseminacao.animal.propriedade,
+            tipo='diagnostico',
+            data_manejo=data_diagnostico,
+            usuario=self.context['request'].user,
+            observacoes=validated_data.get('observacoes', '')
+        )
+        
+        # Adicionar o animal ao manejo
+        manejo.animais.add(inseminacao.animal)
+        
+        # Criar o diagnóstico com o manejo
+        validated_data['manejo'] = manejo
+        diagnostico = super().create(validated_data)
+        
+        return diagnostico
 
 
 class PartoSerializer(serializers.ModelSerializer):

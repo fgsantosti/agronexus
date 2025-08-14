@@ -265,8 +265,10 @@ class AnimalSerializer(serializers.ModelSerializer):
     lote_atual = serializers.StringRelatedField(read_only=True)
     lote_atual_id = serializers.UUIDField(
         write_only=True, required=False, allow_null=True)
-    pai = serializers.StringRelatedField(read_only=True)
-    mae = serializers.StringRelatedField(read_only=True)
+    pai = serializers.SerializerMethodField(read_only=True)
+    pai_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    mae = serializers.SerializerMethodField(read_only=True)
+    mae_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     idade_dias = serializers.IntegerField(read_only=True)
     idade_meses = serializers.IntegerField(read_only=True)
     peso_atual = serializers.DecimalField(
@@ -274,12 +276,36 @@ class AnimalSerializer(serializers.ModelSerializer):
     ua_value = serializers.DecimalField(
         max_digits=8, decimal_places=4, read_only=True)
 
+    def get_pai(self, obj):
+        """Retorna dados do pai se existir"""
+        if obj.pai:
+            return {
+                'id': str(obj.pai.id),
+                'identificacao_unica': obj.pai.identificacao_unica,
+                'nome_registro': obj.pai.nome_registro,
+                'sexo': obj.pai.sexo,
+                'categoria': obj.pai.categoria,
+            }
+        return None
+
+    def get_mae(self, obj):
+        """Retorna dados da mãe se existir"""
+        if obj.mae:
+            return {
+                'id': str(obj.mae.id),
+                'identificacao_unica': obj.mae.identificacao_unica,
+                'nome_registro': obj.mae.nome_registro,
+                'sexo': obj.mae.sexo,
+                'categoria': obj.mae.categoria,
+            }
+        return None
+
     class Meta:
         model = Animal
         fields = [
             'id', 'propriedade', 'propriedade_id', 'identificacao_unica', 'nome_registro',
             'sexo', 'data_nascimento', 'especie', 'especie_id', 'raca', 'raca_id', 
-            'categoria', 'status', 'pai', 'mae', 'data_compra', 'valor_compra', 'origem', 
+            'categoria', 'status', 'pai', 'pai_id', 'mae', 'mae_id', 'data_compra', 'valor_compra', 'origem', 
             'data_venda', 'valor_venda', 'destino', 'data_morte', 'causa_morte', 
             'lote_atual', 'lote_atual_id', 'fotos_evolucao', 'observacoes', 
             'data_criacao', 'data_atualizacao', 'idade_dias', 'idade_meses',

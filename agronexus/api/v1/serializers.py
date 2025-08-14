@@ -597,6 +597,41 @@ class PartoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
 
+    def create(self, validated_data):
+        # Extrair mae_id e bezerro_id
+        mae_id = validated_data.pop('mae_id')
+        bezerro_id = validated_data.pop('bezerro_id', None)
+        
+        # Buscar objetos relacionados
+        mae = Animal.objects.get(id=mae_id)
+        bezerro = Animal.objects.get(id=bezerro_id) if bezerro_id else None
+        
+        # Criar o manejo automaticamente
+        manejo = Manejo.objects.create(
+            propriedade=mae.propriedade,
+            tipo='parto',
+            data_manejo=validated_data['data_parto'],
+            observacoes=validated_data.get('observacoes', ''),
+            usuario=self.context['request'].user if 'request' in self.context else None
+        )
+        
+        # Criar o parto
+        parto = Parto.objects.create(
+            mae=mae,
+            manejo=manejo,
+            bezerro=bezerro,
+            **validated_data
+        )
+        
+        # Associar a mãe ao manejo
+        manejo.animais.add(mae)
+        
+        # Se houver bezerro, também associar ao manejo
+        if bezerro:
+            manejo.animais.add(bezerro)
+        
+        return parto
+
 
 # ============================================================================
 # SERIALIZERS DE SANIDADE

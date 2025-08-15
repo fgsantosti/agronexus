@@ -5,7 +5,6 @@ Serializers para API REST
 
 from datetime import date, timedelta
 from decimal import Decimal
-
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -19,7 +18,7 @@ from ...models import (AdministracaoMedicamento, Animal, AnimalManejo, Area,
                        HistoricoOcupacaoArea, Inseminacao,
                        LancamentoFinanceiro, Lote, Manejo, Medicamento, Parto,
                        Pesagem, Propriedade, ProtocoloIATF, RacaAnimal,
-                       RelatorioPersonalizado, Usuario, Vacina, Vacinacao)
+                       RelatorioPersonalizado, Usuario, Vacina, Vacinacao,Inseminacao)
 
 # ============================================================================
 # SERIALIZERS DE USUÁRIOS E AUTENTICAÇÃO
@@ -266,8 +265,10 @@ class AnimalSerializer(serializers.ModelSerializer):
     lote_atual = serializers.StringRelatedField(read_only=True)
     lote_atual_id = serializers.UUIDField(
         write_only=True, required=False, allow_null=True)
-    pai = serializers.StringRelatedField(read_only=True)
-    mae = serializers.StringRelatedField(read_only=True)
+    pai = serializers.SerializerMethodField(read_only=True)
+    pai_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    mae = serializers.SerializerMethodField(read_only=True)
+    mae_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     idade_dias = serializers.IntegerField(read_only=True)
     idade_meses = serializers.IntegerField(read_only=True)
     peso_atual = serializers.DecimalField(
@@ -275,12 +276,36 @@ class AnimalSerializer(serializers.ModelSerializer):
     ua_value = serializers.DecimalField(
         max_digits=8, decimal_places=4, read_only=True)
 
+    def get_pai(self, obj):
+        """Retorna dados do pai se existir"""
+        if obj.pai:
+            return {
+                'id': str(obj.pai.id),
+                'identificacao_unica': obj.pai.identificacao_unica,
+                'nome_registro': obj.pai.nome_registro,
+                'sexo': obj.pai.sexo,
+                'categoria': obj.pai.categoria,
+            }
+        return None
+
+    def get_mae(self, obj):
+        """Retorna dados da mãe se existir"""
+        if obj.mae:
+            return {
+                'id': str(obj.mae.id),
+                'identificacao_unica': obj.mae.identificacao_unica,
+                'nome_registro': obj.mae.nome_registro,
+                'sexo': obj.mae.sexo,
+                'categoria': obj.mae.categoria,
+            }
+        return None
+
     class Meta:
         model = Animal
         fields = [
             'id', 'propriedade', 'propriedade_id', 'identificacao_unica', 'nome_registro',
             'sexo', 'data_nascimento', 'especie', 'especie_id', 'raca', 'raca_id', 
-            'categoria', 'status', 'pai', 'mae', 'data_compra', 'valor_compra', 'origem', 
+            'categoria', 'status', 'pai', 'pai_id', 'mae', 'mae_id', 'data_compra', 'valor_compra', 'origem', 
             'data_venda', 'valor_venda', 'destino', 'data_morte', 'causa_morte', 
             'lote_atual', 'lote_atual_id', 'fotos_evolucao', 'observacoes', 
             'data_criacao', 'data_atualizacao', 'idade_dias', 'idade_meses',
@@ -528,6 +553,32 @@ class DiagnosticoGestacaoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
 
+    def create(self, validated_data):
+        """Cria o diagnóstico e seu manejo associado automaticamente"""
+        
+        # Extrair dados para o manejo
+        inseminacao_id = validated_data['inseminacao_id']
+        inseminacao = Inseminacao.objects.get(id=inseminacao_id)
+        data_diagnostico = validated_data['data_diagnostico']
+        
+        # Criar o manejo primeiro
+        manejo = Manejo.objects.create(
+            propriedade=inseminacao.animal.propriedade,
+            tipo='diagnostico',
+            data_manejo=data_diagnostico,
+            usuario=self.context['request'].user,
+            observacoes=validated_data.get('observacoes', '')
+        )
+        
+        # Adicionar o animal ao manejo
+        manejo.animais.add(inseminacao.animal)
+        
+        # Criar o diagnóstico com o manejo
+        validated_data['manejo'] = manejo
+        diagnostico = super().create(validated_data)
+        
+        return diagnostico
+
 
 class PartoSerializer(serializers.ModelSerializer):
     """Serializer para partos"""
@@ -545,6 +596,41 @@ class PartoSerializer(serializers.ModelSerializer):
             'bezerro', 'bezerro_id', 'peso_nascimento', 'observacoes'
         ]
         read_only_fields = ['id']
+
+    def create(self, validated_data):
+        # Extrair mae_id e bezerro_id
+        mae_id = validated_data.pop('mae_id')
+        bezerro_id = validated_data.pop('bezerro_id', None)
+        
+        # Buscar objetos relacionados
+        mae = Animal.objects.get(id=mae_id)
+        bezerro = Animal.objects.get(id=bezerro_id) if bezerro_id else None
+        
+        # Criar o manejo automaticamente
+        manejo = Manejo.objects.create(
+            propriedade=mae.propriedade,
+            tipo='parto',
+            data_manejo=validated_data['data_parto'],
+            observacoes=validated_data.get('observacoes', ''),
+            usuario=self.context['request'].user if 'request' in self.context else None
+        )
+        
+        # Criar o parto
+        parto = Parto.objects.create(
+            mae=mae,
+            manejo=manejo,
+            bezerro=bezerro,
+            **validated_data
+        )
+        
+        # Associar a mãe ao manejo
+        manejo.animais.add(mae)
+        
+        # Se houver bezerro, também associar ao manejo
+        if bezerro:
+            manejo.animais.add(bezerro)
+        
+        return parto
 
 
 # ============================================================================

@@ -271,6 +271,15 @@ class EspecieAnimal(models.Model):
                 ('carneiro', 'Carneiro'),
                 ('ovelha', 'Ovelha'),
             ],
+            'equino': [
+                ('cavalo', 'Cavalo'),
+                ('égu', 'Égua'),
+                ('potro', 'Potro'),
+            ],
+            'suino': [
+                ('porco', 'Porco'),
+                ('leitão', 'Leitão'),
+            ],
         }
         return categorias_por_especie.get(self.nome, [])
 
@@ -325,12 +334,34 @@ class Animal(models.Model):
     ]
 
     CATEGORIA_CHOICES = [
+        # Bovino
         ('bezerro', 'Bezerro'),
         ('bezerra', 'Bezerra'),
         ('novilho', 'Novilho'),
         ('novilha', 'Novilha'),
         ('touro', 'Touro'),
         ('vaca', 'Vaca'),
+        # Caprino
+        ('cabrito', 'Cabrito'),
+        ('cabrita', 'Cabrita'),
+        ('bode_jovem', 'Bode Jovem'),
+        ('cabra_jovem', 'Cabra Jovem'),
+        ('bode', 'Bode'),
+        ('cabra', 'Cabra'),
+        # Ovino
+        ('cordeiro', 'Cordeiro'),
+        ('cordeira', 'Cordeira'),
+        ('carneiro_jovem', 'Carneiro Jovem'),
+        ('ovelha_jovem', 'Ovelha Jovem'),
+        ('carneiro', 'Carneiro'),
+        ('ovelha', 'Ovelha'),
+        # Equino
+        ('cavalo', 'Cavalo'),
+        ('egua', 'Égua'),
+        ('potro', 'Potro'),
+        # Suíno
+        ('porco', 'Porco'),
+        ('leitao', 'Leitão'),
     ]
 
     ORIGEM_CHOICES = [

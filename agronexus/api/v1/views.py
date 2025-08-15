@@ -695,11 +695,47 @@ class InseminacaoViewSet(BaseViewSet):
     @action(detail=False, methods=['get'])
     def opcoes_cadastro(self, request):
         """Retorna dados necessários para cadastro de inseminação"""
-        # Animais fêmeas do usuário (limitado a 50 para melhor performance)
+        from datetime import datetime, timedelta
+        
+        # Data limite para considerar inseminações recentes (últimos 90 dias)
+        data_limite = datetime.now().date() - timedelta(days=90)
+        
+        # Buscar fêmeas que estão "ocupadas" (inseminadas e ainda não disponíveis)
+        femeas_ocupadas = set()
+        
+        # 1. Fêmeas com inseminações recentes sem diagnóstico
+        inseminacoes_sem_diagnostico = Inseminacao.objects.filter(
+            animal__propriedade__proprietario=request.user,
+            data_inseminacao__gte=data_limite,
+            diagnosticos__isnull=True
+        ).values_list('animal_id', flat=True)
+        femeas_ocupadas.update(inseminacoes_sem_diagnostico)
+        
+        # 2. Fêmeas com diagnóstico positivo que ainda não pariram
+        # Buscar diagnósticos positivos
+        diagnosticos_positivos = DiagnosticoGestacao.objects.filter(
+            inseminacao__animal__propriedade__proprietario=request.user,
+            resultado='positivo'
+        ).select_related('inseminacao__animal')
+        
+        for diagnostico in diagnosticos_positivos:
+            animal = diagnostico.inseminacao.animal
+            # Verificar se houve parto após este diagnóstico
+            parto_posterior = Parto.objects.filter(
+                mae=animal,
+                data_parto__gt=diagnostico.data_diagnostico
+            ).exists()
+            
+            if not parto_posterior:
+                femeas_ocupadas.add(animal.id)
+        
+        # Animais fêmeas disponíveis para inseminação
         femeas = Animal.objects.filter(
             propriedade__proprietario=request.user,
             sexo='F',
             status='ativo'
+        ).exclude(
+            id__in=femeas_ocupadas
         ).values('id', 'identificacao_unica', 'nome_registro', 'sexo', 'data_nascimento', 'categoria').order_by('identificacao_unica')[:50]
 
         # Reprodutores machos do usuário (limitado a 20)

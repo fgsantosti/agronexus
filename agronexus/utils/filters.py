@@ -11,7 +11,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from ..models import (Animal, Area, CalendarioSanitario, CategoriaFinanceira,
-                      ContaFinanceira, DiagnosticoGestacao, EstacaoMonta,
+                      ContaFinanceira, DiagnosticoGestacao, EspecieAnimal, EstacaoMonta,
                       Inseminacao, LancamentoFinanceiro, Lote, Manejo,
                       Medicamento, Parto, Pesagem, Propriedade, ProtocoloIATF,
                       Vacina, Vacinacao)
@@ -80,10 +80,12 @@ class AnimalFilter(django_filters.FilterSet):
     lote = django_filters.ModelChoiceFilter(
         field_name='lote_atual', queryset=Lote.objects.all())
     sem_lote = django_filters.BooleanFilter(method='filter_sem_lote')
+    especie = django_filters.ModelChoiceFilter(
+        field_name='especie', queryset=EspecieAnimal.objects.all())
 
     class Meta:
         model = Animal
-        fields = ['propriedade', 'sexo', 'categoria', 'status', 'lote_atual']
+        fields = ['propriedade', 'sexo', 'categoria', 'status', 'lote_atual', 'especie']
 
     def filter_idade_min_meses(self, queryset, name, value):
         """Filtra animais com idade mínima em meses"""

@@ -506,6 +506,33 @@ class LoteViewSet(BaseViewSet):
             }
         })
 
+    @action(detail=False, methods=['get'])
+    def disponivel(self, request):
+        """Lista lotes disponíveis para associação"""
+        propriedade_id = request.query_params.get('propriedade_id')
+        
+        queryset = self.get_queryset()
+        
+        if propriedade_id:
+            queryset = queryset.filter(propriedade_id=propriedade_id)
+        
+        # Retorna informações resumidas dos lotes
+        lotes_data = []
+        for lote in queryset:
+            total_femeas = lote.animais.filter(sexo='F', status='ativo').count()
+            lotes_data.append({
+                'id': str(lote.id),
+                'nome': lote.nome,
+                'descricao': lote.descricao,
+                'total_animais': lote.get_total_animais(),
+                'total_femeas': total_femeas,
+                'aptidao': lote.aptidao,
+                'finalidade': lote.finalidade,
+                'sistema_criacao': lote.sistema_criacao,
+            })
+        
+        return Response(lotes_data)
+
 
 # ============================================================================
 # VIEWSETS DE MANEJO
@@ -602,6 +629,20 @@ class EstacaoMontaViewSet(BaseViewSet):
             'propriedade'
         ).prefetch_related('lotes_participantes')
 
+    def perform_create(self, serializer):
+        """Se propriedade_id não for fornecida, usa a primeira propriedade do usuário"""
+        if 'propriedade_id' not in serializer.validated_data or not serializer.validated_data['propriedade_id']:
+            # Busca a primeira propriedade do usuário
+            primeira_propriedade = self.request.user.propriedades.first()
+            if primeira_propriedade:
+                serializer.save(propriedade=primeira_propriedade)
+            else:
+                # Se não tem propriedade, retorna erro
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("Usuário não possui propriedades cadastradas.")
+        else:
+            serializer.save()
+
     @action(detail=True, methods=['get'])
     def relatorio_reproducao(self, request, pk=None):
         """Relatório de reprodução da estação"""
@@ -612,10 +653,10 @@ class EstacaoMontaViewSet(BaseViewSet):
         taxa_prenhez = estacao.get_taxa_prenhez()
 
         # Inseminações realizadas
-        total_inseminacoes = estacao.inseminacoes.count()
+        total_inseminacoes = estacao.inseminacao_set.count()
 
         # Diagnósticos
-        diagnosticos = estacao.inseminacoes.aggregate(
+        diagnosticos = estacao.inseminacao_set.aggregate(
             positivos=Count('diagnosticos', filter=Q(
                 diagnosticos__resultado='positivo')),
             negativos=Count('diagnosticos', filter=Q(
@@ -631,6 +672,121 @@ class EstacaoMontaViewSet(BaseViewSet):
                 'total_inseminacoes': total_inseminacoes
             },
             'diagnosticos': diagnosticos
+        })
+
+    @action(detail=True, methods=['get'])
+    def detalhe(self, request, pk=None):
+        """Detalhe completo da estação com lotes associados"""
+        estacao = self.get_object()
+        
+        # Lotes associados com informações resumidas
+        lotes_data = []
+        for lote in estacao.lotes_participantes.all():
+            lotes_data.append({
+                'id': str(lote.id),
+                'nome': lote.nome,
+                'descricao': lote.descricao,
+                'total_animais': lote.get_total_animais(),
+                'total_femeas': lote.animais.filter(sexo='F', status='ativo').count(),
+                'aptidao': lote.aptidao,
+                'finalidade': lote.finalidade,
+            })
+        
+        return Response({
+            'estacao': self.get_serializer(estacao).data,
+            'lotes': lotes_data
+        })
+
+    @action(detail=True, methods=['post'])
+    def associar_lotes(self, request, pk=None):
+        """Associar lotes à estação de monta"""
+        estacao = self.get_object()
+        lote_ids = request.data.get('lote_ids', [])
+        
+        if not isinstance(lote_ids, list):
+            return Response(
+                {'error': 'lote_ids deve ser uma lista'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar se todos os lotes pertencem ao usuário
+        lotes = Lote.objects.filter(
+            id__in=lote_ids,
+            propriedade__proprietario=request.user
+        )
+        
+        if len(lotes) != len(lote_ids):
+            return Response(
+                {'error': 'Alguns lotes não foram encontrados ou não pertencem ao usuário'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Associar lotes à estação
+        estacao.lotes_participantes.set(lotes)
+        
+        return Response({'message': 'Lotes associados com sucesso'})
+
+    @action(detail=True, methods=['get'])
+    def dashboard(self, request, pk=None):
+        """Dashboard com estatísticas da estação"""
+        estacao = self.get_object()
+        
+        # Contadores básicos
+        total_femeas = estacao.get_total_femeas()
+        inseminacoes_realizadas = estacao.inseminacao_set.count()
+        
+        # Diagnósticos
+        diagnosticos_realizados = DiagnosticoGestacao.objects.filter(
+            inseminacao__estacao_monta=estacao
+        ).count()
+        
+        diagnosticos_positivos = DiagnosticoGestacao.objects.filter(
+            inseminacao__estacao_monta=estacao,
+            resultado='positivo'
+        ).count()
+        
+        # Partos
+        partos_realizados = Parto.objects.filter(
+            mae__inseminacoes__estacao_monta=estacao
+        ).distinct().count()
+        
+        # Cálculo de pendências (estimativas baseadas em prazos)
+        from datetime import datetime, timedelta
+        
+        # Inseminações que deveriam ter diagnóstico (30-60 dias)
+        data_limite_diagnostico = datetime.now().date() - timedelta(days=30)
+        inseminacoes_sem_diagnostico = estacao.inseminacao_set.filter(
+            data_inseminacao__lte=data_limite_diagnostico
+        ).exclude(
+            diagnosticos__isnull=False
+        ).count()
+        
+        # Gestações que deveriam ter parido (período de gestação + margem)
+        gestacoes_sem_parto = DiagnosticoGestacao.objects.filter(
+            inseminacao__estacao_monta=estacao,
+            resultado='positivo'
+        ).exclude(
+            inseminacao__animal__partos__data_parto__gt=F('data_diagnostico')
+        ).count()
+        
+        # Taxas
+        taxa_prenhez = (diagnosticos_positivos / inseminacoes_realizadas * 100) if inseminacoes_realizadas > 0 else 0
+        taxa_parto = (partos_realizados / diagnosticos_positivos * 100) if diagnosticos_positivos > 0 else 0
+        
+        return Response({
+            'estacao_id': str(estacao.id),
+            'estacao_nome': estacao.nome,
+            'total_femeas': total_femeas,
+            'inseminacoes_realizadas': inseminacoes_realizadas,
+            'diagnosticos_realizados': diagnosticos_realizados,
+            'partos_realizados': partos_realizados,
+            'inseminacoes_pendentes': 0,  # Placeholder - definir lógica específica
+            'diagnosticos_pendentes': inseminacoes_sem_diagnostico,
+            'partos_pendentes': gestacoes_sem_parto,
+            'taxa_prenhez': round(taxa_prenhez, 2),
+            'taxa_parto': round(taxa_parto, 2),
+            'progresso_estacao': round((inseminacoes_realizadas / total_femeas * 100) if total_femeas > 0 else 0, 2),
+            'evolucao_temporal': []  # Placeholder - implementar dados temporais se necessário
         })
 
 

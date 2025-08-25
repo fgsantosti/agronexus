@@ -273,6 +273,8 @@ class PartoFilter(django_filters.FilterSet):
     # Filtros relacionados
     mae = django_filters.ModelChoiceFilter(queryset=Animal.objects.all())
     bezerro = django_filters.ModelChoiceFilter(queryset=Animal.objects.all())
+    estacao_monta = django_filters.ModelChoiceFilter(
+        field_name='mae__inseminacoes__estacao_monta', queryset=EstacaoMonta.objects.all())
 
     class Meta:
         model = Parto

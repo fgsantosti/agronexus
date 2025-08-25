@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroNexus - Sistema de Gestão Pecuária</title>
+    <link rel="icon" type="image/png" href="{% load static %}{% static 'imagens/logo.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% load static %}{% static 'imagens/logo.png' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --agro-green: #16a34a;
+            --agro-dark-green: #15803d;
+            --agro-light-green: #dcfce7;
+            --agro-yellow: #eab308;
+            --agro-brown: #92400e;
+            --agro-light-brown: #fed7aa;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--agro-green) 0%, var(--agro-dark-green) 100%);
+            color: white;
+            padding: 80px 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero-content p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .btn-agro-primary {
+            background: var(--agro-yellow);
+            border: none;
+            color: #000;
+            font-weight: 600;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-agro-primary:hover {
+            background: #ca8a04;
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(234, 179, 8, 0.3);
+        }
+
+        .features-section {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--agro-light-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: var(--agro-green);
+            font-size: 2rem;
+        }
+
+        .stats-section {
+            background: var(--agro-light-green);
+            padding: 60px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            color: var(--agro-dark-green);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, var(--agro-brown) 0%, #a16207 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .logo-container {
+            margin-bottom: 2rem;
+        }
+
+        .logo-container img {
+            max-height: 120px;
+            width: auto;
+        }
+
+        .navbar-brand img {
+            max-height: 40px;
+            width: auto;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+
+        .navbar-nav .nav-link {
+            color: var(--agro-dark-green) !important;
+            font-weight: 500;
+            margin: 0 0.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            color: var(--agro-green) !important;
+        }
+
+        .btn-outline-agro {
+            border: 2px solid var(--agro-green);
+            color: var(--agro-green);
+            font-weight: 600;
+            padding: 8px 20px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-agro:hover {
+            background: var(--agro-green);
+            color: white;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--agro-dark-green);
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .feature-card h5 {
+            color: var(--agro-dark-green);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero-content p {
+                font-size: 1.1rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="{% load static %}{% static 'imagens/logo.png' %}" alt="AgroNexus Logo">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#recursos">Recursos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#sobre">Sobre</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contato">Contato</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <a class="btn btn-outline-agro" href="/admin">Acessar Sistema</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="hero-content">
+                        <h1>Gestão Pecuária Inteligente</h1>
+                        <p>Sistema completo para gerenciamento de propriedades rurais, controle de rebanho, manejo sanitário e gestão financeira.</p>
+                        <a href="/admin" class="btn-agro-primary">
+                            <i class="fas fa-rocket me-2"></i>Começar Agora
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="text-center">
+                        <i class="fas fa-cow" style="font-size: 15rem; opacity: 0.1;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="stat-item">
+                        <span class="stat-number" data-count="{{ stats.propriedades }}">{{ stats.propriedades|default:"0" }}</span>
+                        <span class="stat-label">Propriedades Cadastradas</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="stat-item">
+                        <span class="stat-number" data-count="{{ stats.animais }}">{{ stats.animais|default:"0" }}</span>
+                        <span class="stat-label">Animais Gerenciados</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="stat-item">
+                        <span class="stat-number" data-count="{{ stats.lotes }}">{{ stats.lotes|default:"0" }}</span>
+                        <span class="stat-label">Lotes Ativos</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="stat-item">
+                        <span class="stat-number" data-count="{{ stats.usuarios }}">{{ stats.usuarios|default:"0" }}</span>
+                        <span class="stat-label">Usuários do Sistema</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="recursos">
+        <div class="container">
+            <h2 class="section-title">Recursos Principais</h2>
+            <div class="row">
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-cow"></i>
+                        </div>
+                        <h5>Gestão de Rebanho</h5>
+                        <p>Controle completo dos animais, lotes, pesagens, manejos e histórico genealógico.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-syringe"></i>
+                        </div>
+                        <h5>Manejo Sanitário</h5>
+                        <p>Calendário de vacinação, controle de medicamentos e acompanhamento veterinário.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <h5>Reprodução</h5>
+                        <p>Gestão de estações de monta, inseminação artificial, protocolos IATF e controle de partos.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h5>Gestão Financeira</h5>
+                        <p>Controle de receitas, despesas, fluxo de caixa e relatórios financeiros detalhados.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <h5>Propriedades e Áreas</h5>
+                        <p>Cadastro e gestão de propriedades, divisão em áreas e controle de ocupação.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h5>Relatórios</h5>
+                        <p>Relatórios personalizados, dashboards interativos e análises de desempenho.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="sobre">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8 text-center">
+                    <h2 class="mb-4">Modernize sua Gestão Pecuária</h2>
+                    <p class="lead mb-4">O AgroNexus é a solução completa para produtores rurais que buscam eficiência, controle e resultados em sua propriedade.</p>
+                    <a href="/admin" class="btn-agro-primary me-3">
+                        <i class="fas fa-play me-2"></i>Começar Gratuitamente
+                    </a>
+                    <a href="#contato" class="btn btn-outline-light">
+                        <i class="fas fa-phone me-2"></i>Fale Conosco
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-5" id="contato">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <img src="{% load static %}{% static 'imagens/logo.png' %}" alt="AgroNexus" style="max-height: 50px;" class="mb-3">
+                    <p>Sistema de gestão pecuária desenvolvido para modernizar e otimizar a administração de propriedades rurais.</p>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <h5 class="mb-3">Recursos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-light-50">Gestão de Rebanho</a></li>
+                        <li><a href="#" class="text-light-50">Manejo Sanitário</a></li>
+                        <li><a href="#" class="text-light-50">Controle Reprodutivo</a></li>
+                        <li><a href="#" class="text-light-50">Gestão Financeira</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <h5 class="mb-3">Contato</h5>
+                    <p><i class="fas fa-envelope me-2"></i> contato@agronexus.com</p>
+                    <p><i class="fas fa-phone me-2"></i> (89) 9428-3418</p>
+                    <div class="social-links mt-3">
+                        <a href="#" class="text-light me-3"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-light me-3"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-light me-3"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <p>&copy; {{ current_year }} AgroNexus. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Animação dos números das estatísticas
+        function animateNumbers() {
+            const stats = document.querySelectorAll('.stat-number');
+            stats.forEach(stat => {
+                const target = parseInt(stat.getAttribute('data-count'));
+                let current = 0;
+                const increment = target / 100;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    stat.textContent = Math.floor(current);
+                }, 20);
+            });
+        }
+
+        // Executar animação quando a seção de estatísticas entrar na tela
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateNumbers();
+                    observer.unobserve(entry.target);
+                }
+            });
+        });
+
+        const statsSection = document.querySelector('.stats-section');
+        if (statsSection) {
+            observer.observe(statsSection);
+        }
+
+        // Smooth scrolling para links internos
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

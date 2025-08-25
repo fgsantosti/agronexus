@@ -9,8 +9,12 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
                                    SpectacularSwaggerView)
+from agronexus.views import home_view
 
 urlpatterns = [
+    # Home page
+    path('', home_view, name='home'),
+
     # Admin
     path('admin/', admin.site.urls),
 

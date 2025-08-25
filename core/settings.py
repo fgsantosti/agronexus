@@ -18,13 +18,7 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-'''ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
-'''
-
-ALLOWED_HOSTS = ['192.168.0.104', 'localhost', '127.0.0.1', '10.0.2.2']
-
-
+ALLOWED_HOSTS = ['147.79.86.240', 'www.agronexus.app', 'agronexus.app', 'localhost', '127.0.0.1']
 
 # Application definition
 DJANGO_APPS = [
@@ -128,15 +122,12 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = config('STATIC_URL', default='/static/')
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
+STATIC_URL = '/static/'
+STATIC_ROOT = '/root/agronexus/static/'
 
 # Media files
-MEDIA_URL = config('MEDIA_URL', default='/media/')
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = '/root/agronexus/media/'
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = config(

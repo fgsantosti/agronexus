@@ -432,6 +432,857 @@ class AnimalViewSet(BaseViewSet):
 
         return Response({'message': 'Animal movido com sucesso'})
 
+    @action(detail=False, methods=['post'])
+    def exportar_excel(self, request):
+        """
+        Exporta animais para Excel com validações de segurança.
+        Só permite exportar animais de propriedades que pertencem ao usuário autenticado.
+        """
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from django.http import HttpResponse
+        from django.utils import timezone
+        import io
+
+        # Validações de segurança
+        propriedade_id = request.data.get('propriedade_id')
+        incluir_genealogia = request.data.get('incluir_genealogia', False)
+        incluir_estatisticas = request.data.get('incluir_estatisticas', False)
+        formato_data = request.data.get('formato_data', 'dd/MM/yyyy')
+
+        # Valida se o usuário tem acesso às propriedades especificadas
+        propriedades_usuario = Propriedade.objects.filter(proprietario=request.user)
+        
+        # Monta a query base com filtros de segurança
+        queryset = self.get_queryset()
+
+        if propriedade_id:
+            # Verifica se a propriedade especificada pertence ao usuário
+            if not propriedades_usuario.filter(id=propriedade_id).exists():
+                return Response(
+                    {'error': 'Você não tem permissão para exportar dados desta propriedade'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            queryset = queryset.filter(propriedade_id=propriedade_id)
+        else:
+            # Se não especificar propriedade, limita às propriedades do usuário
+            queryset = queryset.filter(propriedade__in=propriedades_usuario)
+
+        # Aplica filtros adicionais
+        especie_id = request.data.get('especie_id')
+        if especie_id:
+            queryset = queryset.filter(especie_id=especie_id)
+
+        status_filter = request.data.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        search = request.data.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(identificacao_unica__icontains=search) |
+                Q(nome_registro__icontains=search)
+            )
+
+        # Ordena por identificação única
+        queryset = queryset.select_related(
+            'propriedade', 'especie', 'raca', 'lote_atual', 'pai', 'mae'
+        ).order_by('identificacao_unica')
+
+        # Validação de segurança: verifica se todos os animais pertencem ao usuário
+        animais_nao_autorizados = queryset.exclude(
+            propriedade__in=propriedades_usuario
+        ).count()
+        
+        if animais_nao_autorizados > 0:
+            return Response(
+                {'error': 'Tentativa de acesso a dados não autorizados detectada'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Cria o workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Animais"
+
+        # Estilos
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill("solid", fgColor="2E8B57")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+
+        # Define as colunas básicas
+        colunas = [
+            'ID Único', 'Nome/Registro', 'Propriedade', 'Espécie', 'Raça', 
+            'Sexo', 'Data Nascimento', 'Categoria', 'Status', 'Lote Atual',
+            'Peso Atual (kg)', 'Idade (meses)'
+        ]
+
+        # Adiciona colunas de genealogia se solicitado
+        if incluir_genealogia:
+            colunas.extend(['Pai', 'Mãe'])
+
+        # Escreve o cabeçalho
+        for col_num, column_title in enumerate(colunas, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = column_title
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+
+        # Escreve os dados dos animais
+        row_num = 2
+        for animal in queryset:
+            # Dados básicos
+            dados_animal = [
+                animal.identificacao_unica or '',
+                animal.nome_registro or '',
+                animal.propriedade.nome if animal.propriedade else '',
+                animal.especie.nome_display if animal.especie else '',
+                animal.raca.nome if animal.raca else '',
+                animal.get_sexo_display(),
+                animal.data_nascimento.strftime('%d/%m/%Y') if animal.data_nascimento else '',
+                animal.get_categoria_display(),
+                animal.get_status_display(),
+                animal.lote_atual.nome if animal.lote_atual else '',
+                animal.get_peso_atual() or '',
+                animal.get_idade_meses() or ''
+            ]
+
+            # Adiciona dados de genealogia se solicitado
+            if incluir_genealogia:
+                dados_animal.extend([
+                    animal.pai.identificacao_unica if animal.pai else '',
+                    animal.mae.identificacao_unica if animal.mae else ''
+                ])
+
+            # Escreve a linha
+            for col_num, valor in enumerate(dados_animal, 1):
+                ws.cell(row=row_num, column=col_num, value=valor)
+
+            row_num += 1
+
+        # Adiciona estatísticas se solicitado
+        if incluir_estatisticas:
+            # Cria nova aba para estatísticas
+            ws_stats = wb.create_sheet("Estatísticas")
+            
+            # Calcula estatísticas
+            total_animais = queryset.count()
+            animais_ativos = queryset.filter(status='ativo').count()
+            animais_inativos = queryset.filter(status='inativo').count()
+            
+            # Distribuição por sexo
+            machos = queryset.filter(sexo='M').count()
+            femeas = queryset.filter(sexo='F').count()
+            
+            # Distribuição por espécie
+            por_especie = queryset.values('especie__nome_display').annotate(
+                total=Count('id')
+            ).order_by('-total')
+
+            # Escreve estatísticas
+            stats_data = [
+                ['Estatísticas Gerais', ''],
+                ['Total de Animais', total_animais],
+                ['Animais Ativos', animais_ativos],
+                ['Animais Inativos', animais_inativos],
+                ['', ''],
+                ['Distribuição por Sexo', ''],
+                ['Machos', machos],
+                ['Fêmeas', femeas],
+                ['', ''],
+                ['Distribuição por Espécie', '']
+            ]
+            
+            # Adiciona dados por espécie
+            for esp in por_especie:
+                stats_data.append([esp['especie__nome_display'], esp['total']])
+
+            # Escreve no worksheet
+            for row_num, (label, value) in enumerate(stats_data, 1):
+                ws_stats.cell(row=row_num, column=1, value=label)
+                if value != '':
+                    ws_stats.cell(row=row_num, column=2, value=value)
+
+            # Aplica formatação ao cabeçalho das estatísticas
+            for row in [1, 6, 10]:
+                cell = ws_stats.cell(row=row, column=1)
+                cell.font = header_font
+                cell.fill = header_fill
+
+        # Ajusta a largura das colunas
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # Gera o arquivo em memória
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Prepara a resposta
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        propriedade_nome = ''
+        if propriedade_id:
+            prop = propriedades_usuario.filter(id=propriedade_id).first()
+            propriedade_nome = f'_{prop.nome.replace(" ", "_")}' if prop else ''
+        
+        filename = f'animais_export{propriedade_nome}_{timestamp}.xlsx'
+        
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+
+    @action(detail=False, methods=['post'])
+    def importar_planilha(self, request):
+        """
+        Importa animais de uma planilha Excel (.xlsx) com validações de segurança.
+        Só permite importar para propriedades que pertencem ao usuário autenticado.
+        """
+        import openpyxl
+        from django.db import transaction
+        from datetime import datetime
+        import io
+
+        # Verifica se arquivo foi enviado
+        if 'arquivo' not in request.FILES:
+            return Response(
+                {'error': 'Arquivo não enviado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        arquivo = request.FILES['arquivo']
+
+        # Valida extensão do arquivo
+        if not arquivo.name.lower().endswith('.xlsx'):
+            return Response(
+                {'error': 'Formato de arquivo inválido. Use apenas .xlsx'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Valida tamanho do arquivo (máximo 5MB)
+        if arquivo.size > 5 * 1024 * 1024:
+            return Response(
+                {'error': 'Arquivo muito grande. Máximo 5MB permitido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Carrega o arquivo Excel
+            wb = openpyxl.load_workbook(arquivo, data_only=True)
+            if not wb.worksheets:
+                return Response(
+                    {'error': 'Planilha vazia ou inválida'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            ws = wb.active
+            rows = list(ws.iter_rows(values_only=True))
+            
+            if len(rows) < 2:
+                return Response(
+                    {'error': 'Planilha deve conter pelo menos cabeçalho e uma linha de dados'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Primeira linha são os cabeçalhos
+            headers = [str(header).strip().lower() if header else '' for header in rows[0]]
+            
+            # Mapeamento de cabeçalhos em português para nomes técnicos
+            mapeamento_headers = {
+                'id único': 'identificacao_unica',
+                'identificacao única': 'identificacao_unica',
+                'identificacao_unica': 'identificacao_unica',
+                'identificacao': 'identificacao_unica',
+                'nome/registro': 'nome_registro',
+                'nome registro': 'nome_registro',
+                'nome_registro': 'nome_registro',
+                'nome': 'nome_registro',
+                'propriedade': 'propriedade',
+                'espécie': 'especie',
+                'especie': 'especie',
+                'raça': 'raca',
+                'raca': 'raca',
+                'sexo': 'sexo',
+                'data nascimento': 'data_nascimento',
+                'data_nascimento': 'data_nascimento',
+                'data de nascimento': 'data_nascimento',
+                'nascimento': 'data_nascimento',
+                'categoria': 'categoria',
+                'status': 'status',
+                'lote atual': 'lote_atual',
+                'lote_atual': 'lote_atual',
+                'lote': 'lote_atual',
+                'peso atual (kg)': 'peso_atual',
+                'peso atual': 'peso_atual',
+                'peso_atual': 'peso_atual',
+                'peso': 'peso_atual',
+                'observações': 'observacoes',
+                'observacoes': 'observacoes',
+                'observação': 'observacoes',
+                'obs': 'observacoes',
+            }
+            
+            # Converter cabeçalhos usando o mapeamento
+            headers_normalizados = []
+            for header in headers:
+                header_mapeado = mapeamento_headers.get(header, header)
+                headers_normalizados.append(header_mapeado)
+            
+            headers = headers_normalizados
+            
+            # Validar cabeçalhos obrigatórios
+            headers_obrigatorios = ['identificacao_unica', 'especie', 'sexo', 'data_nascimento', 'categoria', 'status']
+            headers_faltantes = []
+            
+            for header in headers_obrigatorios:
+                if header not in headers:
+                    headers_faltantes.append(header)
+            
+            if headers_faltantes:
+                return Response(
+                    {'error': f'Colunas obrigatórias ausentes: {", ".join(headers_faltantes)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Validações de segurança - verificar propriedades
+            propriedades_usuario = Propriedade.objects.filter(proprietario=request.user)
+            if not propriedades_usuario.exists():
+                return Response(
+                    {'error': 'Usuário não possui propriedades cadastradas'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Processar linhas de dados
+            animais_validos = []
+            animais_duplicados = []
+            erros = []
+            linha_num = 1  # Primeira linha de dados
+
+            with transaction.atomic():
+                for row in rows[1:]:  # Pula o cabeçalho
+                    linha_num += 1
+                    
+                    # Pular linhas completamente vazias
+                    if not any(row):
+                        continue
+                    
+                    try:
+                        # Criar dicionário com dados da linha usando headers originais para mapeamento
+                        headers_originais = [str(header).strip().lower() if header else '' for header in rows[0]]
+                        dados_animal = {}
+                        for i, valor in enumerate(row):
+                            if i < len(headers_originais):
+                                # Usar o header mapeado
+                                header_mapeado = mapeamento_headers.get(headers_originais[i], headers_originais[i])
+                                dados_animal[header_mapeado] = str(valor).strip() if valor else ''
+
+                        # Validações básicas
+                        erros_linha = []
+                        
+                        # Validar identificação única
+                        identificacao = dados_animal.get('identificacao_unica', '').strip()
+                        if not identificacao:
+                            erros_linha.append('Identificação única é obrigatória')
+                        elif Animal.objects.filter(identificacao_unica=identificacao).exists():
+                            # Animal já existe - pular esta linha sem erro
+                            animais_duplicados.append(identificacao)
+                            continue
+
+                        # Validar espécie
+                        nome_especie = dados_animal.get('especie', '').strip()
+                        especie = None
+                        if nome_especie:
+                            try:
+                                # Tentar primeiro pelo nome_display (ex: "Bovino")
+                                especie = EspecieAnimal.objects.get(nome_display__iexact=nome_especie)
+                            except EspecieAnimal.DoesNotExist:
+                                try:
+                                    # Tentar pelo nome técnico (ex: "bovino")
+                                    especie = EspecieAnimal.objects.get(nome__iexact=nome_especie)
+                                except EspecieAnimal.DoesNotExist:
+                                    erros_linha.append(f'Espécie "{nome_especie}" não encontrada')
+                        else:
+                            erros_linha.append('Espécie é obrigatória')
+
+                        # Validar sexo
+                        sexo = dados_animal.get('sexo', '').strip().upper()
+                        if sexo not in ['M', 'F', 'MACHO', 'FEMEA', 'MASCULINO', 'FEMININO', 'FÊMEA', 'FÉMEA']:
+                            erros_linha.append('Sexo deve ser M/F ou Macho/Fêmea')
+                        
+                        # Normalizar sexo
+                        if sexo in ['MACHO', 'MASCULINO']:
+                            sexo = 'M'
+                        elif sexo in ['FEMEA', 'FEMININO', 'FÊMEA', 'FÉMEA']:
+                            sexo = 'F'
+
+                        # Validar data de nascimento
+                        data_nascimento_str = dados_animal.get('data_nascimento', '').strip()
+                        data_nascimento = None
+                        if data_nascimento_str:
+                            try:
+                                # Tentar diferentes formatos de data
+                                formatos = ['%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d', '%m/%d/%Y']
+                                for formato in formatos:
+                                    try:
+                                        data_nascimento = datetime.strptime(data_nascimento_str, formato).date()
+                                        break
+                                    except ValueError:
+                                        continue
+                                
+                                if not data_nascimento:
+                                    erros_linha.append(f'Formato de data inválido: "{data_nascimento_str}". Use dd/mm/aaaa')
+                            except Exception:
+                                erros_linha.append(f'Data de nascimento inválida: "{data_nascimento_str}"')
+                        else:
+                            erros_linha.append('Data de nascimento é obrigatória')
+
+                        # Validar categoria
+                        categoria = dados_animal.get('categoria', '').strip().lower()
+                        if not categoria:
+                            erros_linha.append('Categoria é obrigatória')
+
+                        # Validar status
+                        status_animal = dados_animal.get('status', '').strip().lower()
+                        if status_animal not in ['ativo', 'inativo', 'vendido', 'morto', 'descartado']:
+                            erros_linha.append('Status deve ser "ativo", "inativo", "vendido", "morto" ou "descartado"')
+
+                        # Validar propriedade (se especificada)
+                        propriedade_nome = dados_animal.get('propriedade', '').strip()
+                        propriedade = None
+                        if propriedade_nome:
+                            # Buscar propriedade por nome
+                            try:
+                                propriedade = propriedades_usuario.get(nome__iexact=propriedade_nome)
+                            except Propriedade.DoesNotExist:
+                                erros_linha.append(f'Propriedade "{propriedade_nome}" não encontrada')
+                        else:
+                            # Se não especificada, usar a primeira propriedade do usuário
+                            propriedade = propriedades_usuario.first()
+
+                        # Validar raça (opcional)
+                        raca = None
+                        nome_raca = dados_animal.get('raca', '').strip()
+                        if nome_raca and especie:
+                            try:
+                                raca = RacaAnimal.objects.get(nome__iexact=nome_raca, especie=especie)
+                            except RacaAnimal.DoesNotExist:
+                                # Se não encontrar a raça, apenas avisa mas não impede a importação
+                                erros_linha.append(f'Aviso: Raça "{nome_raca}" não encontrada para a espécie "{nome_especie}". Animal será importado sem raça.')
+
+                        # Validar lote (opcional)
+                        lote = None
+                        lote_nome = dados_animal.get('lote_atual', '').strip()
+                        if lote_nome and propriedade:
+                            try:
+                                lote = Lote.objects.get(nome__iexact=lote_nome, propriedade=propriedade)
+                            except Lote.DoesNotExist:
+                                # Lote não encontrado é apenas um aviso
+                                pass
+
+                        # Validar peso (opcional)
+                        peso_atual = None
+                        peso_str = dados_animal.get('peso_atual', '').strip()
+                        if peso_str:
+                            try:
+                                peso_atual = float(peso_str.replace(',', '.'))
+                                if peso_atual <= 0:
+                                    peso_atual = None  # Ignora peso inválido
+                            except ValueError:
+                                # Peso inválido é ignorado
+                                peso_atual = None
+
+                        # Separar erros críticos de avisos
+                        erros_criticos = [erro for erro in erros_linha if not erro.startswith('Aviso:')]
+                        
+                        # Se houver erros críticos nesta linha, adiciona aos erros gerais
+                        if erros_criticos:
+                            erros.extend([f'Linha {linha_num}: {erro}' for erro in erros_criticos])
+                            continue
+
+                        # Criar objeto Animal se todas as validações passaram
+                        nome_registro = dados_animal.get('nome_registro', '').strip()
+                        if not nome_registro:
+                            nome_registro = f"Animal {identificacao}"  # Nome padrão se não informado
+                        
+                        observacoes = dados_animal.get('observacoes', '').strip()
+                        if not observacoes:
+                            observacoes = "Importado da planilha Excel"  # Observação padrão
+                        
+                        animal_data = {
+                            'identificacao_unica': identificacao,
+                            'nome_registro': nome_registro,
+                            'especie': especie,
+                            'raca': raca,
+                            'sexo': sexo,
+                            'data_nascimento': data_nascimento,
+                            'categoria': categoria,
+                            'status': status_animal,
+                            'propriedade': propriedade,
+                            'lote_atual': lote,
+                            'observacoes': observacoes,
+                        }
+
+                        # Criar o animal
+                        animal = Animal.objects.create(**animal_data)
+                        
+                        # Adicionar peso inicial se especificado
+                        if peso_atual:
+                            # Criar manejo de pesagem
+                            manejo_pesagem = Manejo.objects.create(
+                                propriedade=propriedade,
+                                tipo='pesagem',
+                                data_manejo=data_nascimento or timezone.now().date(),
+                                observacoes='Peso inicial importado da planilha',
+                                usuario=request.user
+                            )
+                            
+                            # Criar a pesagem vinculada ao manejo
+                            pesagem = Pesagem.objects.create(
+                                animal=animal,
+                                manejo=manejo_pesagem,
+                                data_pesagem=data_nascimento or timezone.now().date(),
+                                peso_kg=peso_atual,
+                                observacoes='Peso inicial importado da planilha'
+                            )
+                            
+                            # Associar o animal ao manejo
+                            manejo_pesagem.animais.add(animal)
+
+                        animais_validos.append(animal.identificacao_unica)
+
+                    except Exception as e:
+                        erros.append(f'Linha {linha_num}: Erro inesperado - {str(e)}')
+
+            # Resultado da importação
+            total_processados = linha_num - 1 - len(animais_duplicados)  # Exclui duplicados do total
+            
+            resultado = {
+                'status': 'sucesso' if not erros else ('parcial' if animais_validos else 'erro'),
+                'total_registros': linha_num - 1,
+                'sucessos': len(animais_validos),
+                'erros': len(erros),
+                'duplicados': len(animais_duplicados),
+                'animais_importados': animais_validos[:10],  # Primeiros 10 para não sobrecarregar
+                'animais_duplicados': animais_duplicados[:10],  # Primeiros 10 duplicados
+                'mensagens_erro': erros[:20],  # Primeiros 20 erros
+            }
+
+            # Mensagens informativas
+            mensagens = []
+            if animais_validos:
+                mensagens.append(f'{len(animais_validos)} animais importados com sucesso')
+            
+            if animais_duplicados:
+                mensagens.append(f'{len(animais_duplicados)} animais ignorados por já existirem')
+            
+            if erros:
+                mensagens.append(f'{len(erros)} erros encontrados durante a importação')
+            
+            resultado['message'] = ' • '.join(mensagens) if mensagens else 'Nenhum animal foi processado'
+
+            # Determinar status HTTP correto
+            if animais_validos:
+                # Se há animais importados com sucesso, retorna 201 Created
+                http_status = status.HTTP_201_CREATED
+            elif animais_duplicados and not erros:
+                # Se só há duplicados (sem erros), retorna 200 OK pois o processamento foi bem-sucedido
+                http_status = status.HTTP_200_OK
+            else:
+                # Se há erros ou nenhum processamento, retorna 400 Bad Request
+                http_status = status.HTTP_400_BAD_REQUEST
+
+            return Response(resultado, status=http_status)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao processar arquivo: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'])
+    def template_importacao(self, request):
+        """
+        Gera template de importação em Excel com headers em português
+        """
+        import openpyxl
+        import openpyxl.utils
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.worksheet.datavalidation import DataValidation
+        from django.http import HttpResponse
+        import io
+
+        # Criar workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Template Importação"
+
+        # Estilos aprimorados
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_fill = PatternFill("solid", fgColor="2E8B57")  # Verde escuro
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        example_font = Font(size=11)
+        example_fill = PatternFill("solid", fgColor="E8F5E8")  # Verde claro
+        example_alignment = Alignment(horizontal="center")
+        
+        required_fill = PatternFill("solid", fgColor="FFE4E1")  # Rosa claro para obrigatórios
+        border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+
+        # Cabeçalhos em português (conforme mapeamento no código)
+        headers = [
+            'Identificação Única',    # identificacao_unica
+            'Nome do Animal',         # nome_registro  
+            'Espécie',               # especie
+            'Raça',                  # raca
+            'Sexo',                  # sexo
+            'Data de Nascimento',    # data_nascimento
+            'Categoria',             # categoria
+            'Status',                # status
+            'Peso Atual (kg)',       # peso_atual
+            'Propriedade',           # propriedade
+            'Lote Atual',           # lote_atual
+            'Observações'           # observacoes
+        ]
+        
+        # Headers técnicos correspondentes (linha oculta para referência)
+        headers_tecnicos = [
+            'identificacao_unica', 'nome_registro', 'especie', 'raca', 'sexo', 'data_nascimento',
+            'categoria', 'status', 'peso_atual', 'propriedade', 'lote_atual', 'observacoes'
+        ]
+
+        # Indicadores de campos obrigatórios
+        obrigatorios = [True, False, True, False, True, True, True, True, False, False, False, False]
+
+        # Escrever cabeçalhos em português
+        for col_num, (header, obrigatorio) in enumerate(zip(headers, obrigatorios), 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = f"{header} {'*' if obrigatorio else ''}"
+            cell.font = header_font
+            cell.fill = header_fill if obrigatorio else PatternFill("solid", fgColor="4682B4")  # Azul para opcionais
+            cell.alignment = header_alignment
+            cell.border = border
+
+        # Linha com exemplos práticos
+        exemplos = [
+            'BOV001',                           # identificacao_unica
+            'Vaca da Silva',                    # nome_registro
+            'Bovino',                          # especie (aceita: Bovino, Ovino, Caprino, Suíno, Equino)
+            'Nelore',                          # raca
+            'F',                               # sexo (M/F ou Macho/Fêmea)
+            '15/03/2020',                      # data_nascimento
+            'vaca',                            # categoria
+            'ativo',                           # status (ativo/inativo)
+            '450.5',                           # peso_atual
+            'Fazenda Principal',               # propriedade
+            'Lote 1',                         # lote_atual
+            'Animal reprodutor de alta genética'  # observacoes
+        ]
+
+        for col_num, (valor, obrigatorio) in enumerate(zip(exemplos, obrigatorios), 1):
+            cell = ws.cell(row=2, column=col_num)
+            cell.value = valor
+            cell.font = example_font
+            cell.fill = required_fill if obrigatorio else example_fill
+            cell.alignment = example_alignment
+            cell.border = border
+
+        # Adicionar mais exemplos variados
+        exemplos_adicionais = [
+            ['OV002', 'Ovelha Branca', 'Ovino', 'Santa Inês', 'F', '10/08/2021', 'matriz', 'ativo', '65.0', 'Fazenda Principal', 'Lote 2', 'Boa produção de leite'],
+            ['CAP003', 'Cabra Preta', 'Caprino', 'Anglo Nubiano', 'F', '05/12/2021', 'cabra', 'ativo', '45.2', 'Fazenda Principal', '', 'Animal jovem'],
+            ['BOV004', 'Touro Champion', 'Bovino', 'Angus', 'M', '20/01/2019', 'reprodutor', 'ativo', '850.0', 'Fazenda Principal', 'Lote 1', 'Reprodutor premium'],
+            ['EQ005', 'Cavalo Veloz', 'Equino', 'Mangalarga', 'M', '12/06/2018', 'garanhão', 'ativo', '480.0', 'Fazenda Principal', '', 'Cavalo de trabalho']
+        ]
+
+        for row_idx, exemplo in enumerate(exemplos_adicionais, 3):
+            for col_num, (valor, obrigatorio) in enumerate(zip(exemplo, obrigatorios), 1):
+                cell = ws.cell(row=row_idx, column=col_num)
+                cell.value = valor
+                cell.font = example_font
+                cell.fill = PatternFill("solid", fgColor="F0F8FF") if obrigatorio else PatternFill("solid", fgColor="F5F5F5")
+                cell.alignment = example_alignment
+                cell.border = border
+
+        # Criar aba de instruções melhorada
+        ws_instrucoes = wb.create_sheet("📋 Instruções de Uso")
+        
+        # Estilos para instruções
+        title_font = Font(bold=True, color="FFFFFF", size=14)
+        title_fill = PatternFill("solid", fgColor="2E8B57")
+        subtitle_font = Font(bold=True, size=12, color="2E8B57")
+        text_font = Font(size=11)
+        required_font = Font(size=11, color="B22222")
+        optional_font = Font(size=11, color="4682B4")
+        
+        instrucoes = [
+            ['🚀 GUIA COMPLETO DE IMPORTAÇÃO DE ANIMAIS', '', '', ''],
+            ['', '', '', ''],
+            ['📋 COMO USAR ESTE TEMPLATE:', '', '', ''],
+            ['1. Preencha os dados na aba "Template Importação"', '', '', ''],
+            ['2. Use os exemplos como referência', '', '', ''],
+            ['3. Campos obrigatórios estão marcados com * e têm fundo rosa', '', '', ''],
+            ['4. Campos opcionais têm fundo azul', '', '', ''],
+            ['5. Salve o arquivo em formato Excel (.xlsx)', '', '', ''],
+            ['6. Importe através do aplicativo AgroNexus', '', '', ''],
+            ['', '', '', ''],
+            
+            ['✅ CAMPOS OBRIGATÓRIOS (devem ser preenchidos):', '', '', ''],
+            ['• Identificação Única*', 'ID único do animal no seu sistema', 'Exemplos: BOV001, VACA123, OV045', ''],
+            ['• Espécie*', 'Tipo do animal', 'Bovino, Ovino, Caprino, Suíno, Equino', ''],
+            ['• Sexo*', 'Sexo do animal', 'M, F, Macho, Fêmea, Masculino, Feminino', ''],
+            ['• Data de Nascimento*', 'Data em formato brasileiro', '15/03/2020, 01/12/2021', ''],
+            ['• Categoria*', 'Classificação do animal', 'vaca, touro, novilha, bezerro, etc.', ''],
+            ['• Status*', 'Situação atual', 'ativo, inativo, vendido, morto', ''],
+            ['', '', '', ''],
+            
+            ['📝 CAMPOS OPCIONAIS (podem ficar vazios):', '', '', ''],
+            ['• Nome do Animal', 'Nome ou registro do animal', 'Vaca da Silva, Touro Champion', ''],
+            ['• Raça', 'Raça do animal (deve existir no sistema)', 'Nelore, Angus, Santa Inês', ''],
+            ['• Peso Atual', 'Peso em quilogramas', '450.5, 65.0, 850.0', ''],
+            ['• Propriedade', 'Nome da propriedade (se vazio, usa a primeira)', 'Fazenda Principal, Sítio do João', ''],
+            ['• Lote Atual', 'Nome do lote (deve existir na propriedade)', 'Lote 1, Pasto Norte, Área A', ''],
+            ['• Observações', 'Informações adicionais sobre o animal', 'Reprodutor, Boa leiteira, Animal jovem', ''],
+            ['', '', '', ''],
+            
+            ['⚠️ REGRAS IMPORTANTES:', '', '', ''],
+            ['✓ Identificação única deve ser diferente para cada animal', '', '', ''],
+            ['✓ Animais com identificação já existente serão ignorados', '', '', ''],
+            ['✓ Use formato de data brasileiro: DD/MM/AAAA', '', '', ''],
+            ['✓ Máximo de 1.000 animais por importação', '', '', ''],
+            ['✓ Não deixe linhas vazias entre os dados', '', '', ''],
+            ['✓ Propriedade e lote devem existir no seu sistema', '', '', ''],
+            ['✓ Arquivo deve estar no formato Excel (.xlsx)', '', '', ''],
+            ['', '', '', ''],
+            
+            ['🔍 VALORES ACEITOS POR CAMPO:', '', '', ''],
+            ['📌 Espécie:', 'Bovino, Ovino, Caprino, Suíno, Equino', '', ''],
+            ['📌 Sexo:', 'M, F, Macho, Fêmea, Masculino, Feminino', '', ''],
+            ['📌 Status:', 'ativo, inativo, vendido, morto, descartado', '', ''],
+            ['📌 Categoria:', 'Qualquer texto (ex: vaca, touro, bezerro)', '', ''],
+            ['📌 Data:', 'DD/MM/AAAA (ex: 15/03/2020, 01/12/2021)', '', ''],
+            ['📌 Peso:', 'Números com ou sem decimal (ex: 450, 380.5)', '', ''],
+            ['', '', '', ''],
+            
+            ['❌ ERROS COMUNS E COMO EVITAR:', '', '', ''],
+            ['🚫 "Identificação já existe"', '→ Use IDs únicos para cada animal', '', ''],
+            ['🚫 "Espécie não encontrada"', '→ Use: Bovino, Ovino, Caprino, Suíno ou Equino', '', ''],
+            ['🚫 "Data inválida"', '→ Use formato DD/MM/AAAA (ex: 15/03/2020)', '', ''],
+            ['🚫 "Propriedade não encontrada"', '→ Use nome exato ou deixe vazio', '', ''],
+            ['🚫 "Arquivo corrompido"', '→ Salve em formato .xlsx (Excel)', '', ''],
+            ['', '', '', ''],
+            
+            ['💡 DICAS PARA SUCESSO:', '', '', ''],
+            ['✨ Teste primeiro com poucos animais (5-10)', '', '', ''],
+            ['✨ Verifique se raças existem no seu sistema', '', '', ''],
+            ['✨ Use identificações simples e organizadas', '', '', ''],
+            ['✨ Mantenha backups dos seus dados', '', '', ''],
+            ['✨ Importe em lotes pequenos se tiver muitos animais', '', '', ''],
+            ['', '', '', ''],
+            
+            ['📞 SUPORTE:', '', '', ''],
+            ['Em caso de dúvidas, contate o suporte técnico', '', '', ''],
+            ['ou consulte a documentação do AgroNexus.', '', '', '']
+        ]
+
+        # Aplicar estilos e conteúdo
+        for row_num, linha in enumerate(instrucoes, 1):
+            for col_num, texto in enumerate(linha, 1):
+                if texto:  # Só processa células com conteúdo
+                    cell = ws_instrucoes.cell(row=row_num, column=col_num)
+                    cell.value = texto
+                    
+                    # Aplicar estilos baseados no conteúdo
+                    if texto.startswith('🚀'):
+                        cell.font = title_font
+                        cell.fill = title_fill
+                        cell.alignment = Alignment(horizontal="center")
+                    elif texto.startswith(('📋', '✅', '📝', '⚠️', '🔍', '❌', '💡', '📞')):
+                        cell.font = subtitle_font
+                    elif '*' in texto and col_num == 1:
+                        cell.font = required_font
+                    elif col_num == 1 and texto.startswith('•'):
+                        cell.font = optional_font
+                    else:
+                        cell.font = text_font
+
+        # Ajustar largura das colunas para melhor visualização
+        # Template principal
+        larguras_template = [18, 20, 12, 15, 8, 18, 15, 12, 15, 20, 15, 35]
+        for col_num, largura in enumerate(larguras_template, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_num)].width = largura
+            
+        # Aba de instruções
+        ws_instrucoes.column_dimensions['A'].width = 45
+        ws_instrucoes.column_dimensions['B'].width = 35
+        ws_instrucoes.column_dimensions['C'].width = 30
+        ws_instrucoes.column_dimensions['D'].width = 15
+        
+        # Congelar primeira linha no template
+        ws.freeze_panes = 'A2'
+        
+        # Adicionar validação de dados para alguns campos
+        from openpyxl.worksheet.datavalidation import DataValidation
+        
+        # Validação para coluna Sexo
+        sexo_validation = DataValidation(
+            type="list",
+            formula1='"M,F,Macho,Fêmea,Masculino,Feminino"',
+            showErrorMessage=True,
+            error="Valor inválido! Use: M, F, Macho, Fêmea, Masculino ou Feminino"
+        )
+        ws.add_data_validation(sexo_validation)
+        sexo_validation.add(f'E2:E1000')  # Coluna Sexo
+        
+        # Validação para coluna Status
+        status_validation = DataValidation(
+            type="list", 
+            formula1='"ativo,inativo,vendido,morto,descartado"',
+            showErrorMessage=True,
+            error="Valor inválido! Use: ativo, inativo, vendido, morto ou descartado"
+        )
+        ws.add_data_validation(status_validation)
+        status_validation.add(f'H2:H1000')  # Coluna Status
+        
+        # Validação para coluna Espécie
+        especie_validation = DataValidation(
+            type="list",
+            formula1='"Bovino,Ovino,Caprino,Suíno,Equino"',
+            showErrorMessage=True,
+            error="Valor inválido! Use: Bovino, Ovino, Caprino, Suíno ou Equino"
+        )
+        ws.add_data_validation(especie_validation)
+        especie_validation.add(f'C2:C1000')  # Coluna Espécie
+
+        # Gerar arquivo em memória
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Resposta HTTP com nome de arquivo mais descritivo
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="AgroNexus_Template_Importacao_Animais.xlsx"'
+        
+        return response
+
 
 class LoteViewSet(BaseViewSet):
     """ViewSet para lotes"""

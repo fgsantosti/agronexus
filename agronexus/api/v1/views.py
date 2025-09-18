@@ -664,7 +664,7 @@ class AnimalViewSet(BaseViewSet):
             )
 
         arquivo = request.FILES['arquivo']
-
+        
         # Valida extensão do arquivo
         if not arquivo.name.lower().endswith('.xlsx'):
             return Response(
@@ -701,9 +701,15 @@ class AnimalViewSet(BaseViewSet):
             headers = [str(header).strip().lower() if header else '' for header in rows[0]]
             
             # Mapeamento de cabeçalhos em português para nomes técnicos
+            # Função auxiliar para normalizar cabeçalhos (remover * e espaços extras)
+            def normalizar_header(header):
+                return header.replace('*', '').strip().lower()
+            
             mapeamento_headers = {
                 'id único': 'identificacao_unica',
+                'id unico': 'identificacao_unica',
                 'identificacao única': 'identificacao_unica',
+                'identificacao unica': 'identificacao_unica',
                 'identificacao_unica': 'identificacao_unica',
                 'identificacao': 'identificacao_unica',
                 'nome/registro': 'nome_registro',
@@ -735,10 +741,14 @@ class AnimalViewSet(BaseViewSet):
                 'obs': 'observacoes',
             }
             
-            # Converter cabeçalhos usando o mapeamento
+            # Converter cabeçalhos usando o mapeamento com normalização
             headers_normalizados = []
-            for header in headers:
-                header_mapeado = mapeamento_headers.get(header, header)
+            for header_original in headers:
+                # Normalizar header removendo asteriscos e espaços
+                header_normalizado = normalizar_header(header_original)
+                
+                # Buscar no mapeamento usando header normalizado
+                header_mapeado = mapeamento_headers.get(header_normalizado, header_original)
                 headers_normalizados.append(header_mapeado)
             
             headers = headers_normalizados
@@ -772,7 +782,7 @@ class AnimalViewSet(BaseViewSet):
             linha_num = 1  # Primeira linha de dados
 
             with transaction.atomic():
-                for row in rows[1:]:  # Pula o cabeçalho
+                for row_index, row in enumerate(rows[1:]):  # Pula o cabeçalho
                     linha_num += 1
                     
                     # Pular linhas completamente vazias
@@ -780,15 +790,14 @@ class AnimalViewSet(BaseViewSet):
                         continue
                     
                     try:
-                        # Criar dicionário com dados da linha usando headers originais para mapeamento
-                        headers_originais = [str(header).strip().lower() if header else '' for header in rows[0]]
+                        # Criar dicionário com dados da linha usando headers mapeados
                         dados_animal = {}
                         for i, valor in enumerate(row):
-                            if i < len(headers_originais):
-                                # Usar o header mapeado
-                                header_mapeado = mapeamento_headers.get(headers_originais[i], headers_originais[i])
-                                dados_animal[header_mapeado] = str(valor).strip() if valor else ''
-
+                            if i < len(headers):  # Usar headers já mapeados
+                                header_mapeado = headers[i]
+                                valor_processado = str(valor).strip() if valor else ''
+                                dados_animal[header_mapeado] = valor_processado
+                        
                         # Validações básicas
                         erros_linha = []
                         
@@ -1044,30 +1053,30 @@ class AnimalViewSet(BaseViewSet):
             top=Side(style='thin'), bottom=Side(style='thin')
         )
 
-        # Cabeçalhos em português (conforme mapeamento no código)
+        # Cabeçalhos em português (conforme mapeamento no código e planilha de exportação)
         headers = [
-            'Identificação Única',    # identificacao_unica
-            'Nome do Animal',         # nome_registro  
+            'ID Único',              # identificacao_unica
+            'Nome/Registro',         # nome_registro  
+            'Propriedade',           # propriedade
             'Espécie',               # especie
             'Raça',                  # raca
             'Sexo',                  # sexo
-            'Data de Nascimento',    # data_nascimento
+            'Data Nascimento',       # data_nascimento
             'Categoria',             # categoria
             'Status',                # status
-            'Peso Atual (kg)',       # peso_atual
-            'Propriedade',           # propriedade
             'Lote Atual',           # lote_atual
+            'Peso Atual (kg)',      # peso_atual
             'Observações'           # observacoes
         ]
         
         # Headers técnicos correspondentes (linha oculta para referência)
         headers_tecnicos = [
-            'identificacao_unica', 'nome_registro', 'especie', 'raca', 'sexo', 'data_nascimento',
-            'categoria', 'status', 'peso_atual', 'propriedade', 'lote_atual', 'observacoes'
+            'identificacao_unica', 'nome_registro', 'propriedade', 'especie', 'raca', 'sexo', 
+            'data_nascimento', 'categoria', 'status', 'lote_atual', 'peso_atual', 'observacoes'
         ]
 
         # Indicadores de campos obrigatórios
-        obrigatorios = [True, False, True, False, True, True, True, True, False, False, False, False]
+        obrigatorios = [True, False, False, True, False, True, True, True, True, False, False, False]
 
         # Escrever cabeçalhos em português
         for col_num, (header, obrigatorio) in enumerate(zip(headers, obrigatorios), 1):
@@ -1082,15 +1091,15 @@ class AnimalViewSet(BaseViewSet):
         exemplos = [
             'BOV001',                           # identificacao_unica
             'Vaca da Silva',                    # nome_registro
+            'Fazenda Principal',               # propriedade
             'Bovino',                          # especie (aceita: Bovino, Ovino, Caprino, Suíno, Equino)
             'Nelore',                          # raca
             'F',                               # sexo (M/F ou Macho/Fêmea)
             '15/03/2020',                      # data_nascimento
             'vaca',                            # categoria
             'ativo',                           # status (ativo/inativo)
-            '450.5',                           # peso_atual
-            'Fazenda Principal',               # propriedade
             'Lote 1',                         # lote_atual
+            '450.5',                           # peso_atual
             'Animal reprodutor de alta genética'  # observacoes
         ]
 
@@ -1104,10 +1113,10 @@ class AnimalViewSet(BaseViewSet):
 
         # Adicionar mais exemplos variados
         exemplos_adicionais = [
-            ['OV002', 'Ovelha Branca', 'Ovino', 'Santa Inês', 'F', '10/08/2021', 'matriz', 'ativo', '65.0', 'Fazenda Principal', 'Lote 2', 'Boa produção de leite'],
-            ['CAP003', 'Cabra Preta', 'Caprino', 'Anglo Nubiano', 'F', '05/12/2021', 'cabra', 'ativo', '45.2', 'Fazenda Principal', '', 'Animal jovem'],
-            ['BOV004', 'Touro Champion', 'Bovino', 'Angus', 'M', '20/01/2019', 'reprodutor', 'ativo', '850.0', 'Fazenda Principal', 'Lote 1', 'Reprodutor premium'],
-            ['EQ005', 'Cavalo Veloz', 'Equino', 'Mangalarga', 'M', '12/06/2018', 'garanhão', 'ativo', '480.0', 'Fazenda Principal', '', 'Cavalo de trabalho']
+            ['OV002', 'Ovelha Branca', 'Fazenda Principal', 'Ovino', 'Santa Inês', 'F', '10/08/2021', 'matriz', 'ativo', 'Lote 2', '65.0', 'Boa produção de leite'],
+            ['CAP003', 'Cabra Preta', 'Fazenda Principal', 'Caprino', 'Anglo Nubiano', 'F', '05/12/2021', 'cabra', 'ativo', '', '45.2', 'Animal jovem'],
+            ['BOV004', 'Touro Champion', 'Fazenda Principal', 'Bovino', 'Angus', 'M', '20/01/2019', 'reprodutor', 'ativo', 'Lote 1', '850.0', 'Reprodutor premium'],
+            ['EQ005', 'Cavalo Veloz', 'Fazenda Principal', 'Equino', 'Mangalarga', 'M', '12/06/2018', 'garanhão', 'ativo', '', '480.0', 'Cavalo de trabalho']
         ]
 
         for row_idx, exemplo in enumerate(exemplos_adicionais, 3):
@@ -1247,7 +1256,7 @@ class AnimalViewSet(BaseViewSet):
             error="Valor inválido! Use: M, F, Macho, Fêmea, Masculino ou Feminino"
         )
         ws.add_data_validation(sexo_validation)
-        sexo_validation.add(f'E2:E1000')  # Coluna Sexo
+        sexo_validation.add(f'F2:F1000')  # Coluna Sexo
         
         # Validação para coluna Status
         status_validation = DataValidation(
@@ -1257,7 +1266,7 @@ class AnimalViewSet(BaseViewSet):
             error="Valor inválido! Use: ativo, inativo, vendido, morto ou descartado"
         )
         ws.add_data_validation(status_validation)
-        status_validation.add(f'H2:H1000')  # Coluna Status
+        status_validation.add(f'I2:I1000')  # Coluna Status
         
         # Validação para coluna Espécie
         especie_validation = DataValidation(
@@ -1267,7 +1276,7 @@ class AnimalViewSet(BaseViewSet):
             error="Valor inválido! Use: Bovino, Ovino, Caprino, Suíno ou Equino"
         )
         ws.add_data_validation(especie_validation)
-        especie_validation.add(f'C2:C1000')  # Coluna Espécie
+        especie_validation.add(f'D2:D1000')  # Coluna Espécie
 
         # Gerar arquivo em memória
         output = io.BytesIO()

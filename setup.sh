@@ -31,6 +31,12 @@ if [ ! -d "static" ]; then
     mkdir -p static
 fi
 
+# Remove existing database
+if [ -f "db.sqlite3" ]; then
+    echo "🗑️ Removing existing database..."
+    rm db.sqlite3
+fi
+
 # Make migrations
 echo "🔄 Making migrations..."
 python manage.py makemigrations
@@ -50,6 +56,10 @@ python manage.py collectstatic --noinput
 # Run basic tests (skip problematic ones)
 echo "🧪 Running basic tests..."
 python manage.py check
+
+# Create test data
+echo "📊 Creating test data..."
+python manage.py criar_dados_teste --animais 50 --force
 
 echo "✅ Setup complete!"
 echo ""

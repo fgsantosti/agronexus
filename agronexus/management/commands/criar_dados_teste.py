@@ -98,6 +98,7 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 # Criar dados em ordem de dependência
+                especies, racas = self.criar_especies_racas()
                 usuarios = self.criar_usuarios(options)
                 propriedades = self.criar_propriedades(usuarios)
                 areas = self.criar_areas(propriedades)
@@ -115,7 +116,9 @@ class Command(BaseCommand):
                     self.style.SUCCESS("✅ DADOS CRIADOS COM SUCESSO!")
                 )
                 self.stdout.write("=" * 60)
-                self.stdout.write(f"👥 Usuários: {len(usuarios)}")
+                self.stdout.write(f"� Espécies: {len(especies)}")
+                self.stdout.write(f"🧬 Raças: {len(racas)}")
+                self.stdout.write(f"�👥 Usuários: {len(usuarios)}")
                 self.stdout.write(f"🏠 Propriedades: {len(propriedades)}")
                 self.stdout.write(f"🌱 Áreas: {len(areas)}")
                 self.stdout.write(f"🐄 Lotes: {len(lotes)}")
@@ -148,6 +151,53 @@ class Command(BaseCommand):
             )
             import traceback
             traceback.print_exc()
+
+    def criar_especies_racas(self):
+        """Cria espécies e raças de animais"""
+        from agronexus.models import EspecieAnimal, RacaAnimal
+        
+        self.stdout.write("🐾 Criando espécies e raças de animais...")
+        
+        # Criar espécie bovina
+        especie_bovina, created = EspecieAnimal.objects.get_or_create(
+            nome='bovino',
+            defaults={
+                'nome_display': 'Bovinos',
+                'peso_ua_referencia': 450,
+                'periodo_gestacao_dias': 285,
+                'idade_primeira_cobertura_meses': 24,
+                'ativo': True
+            }
+        )
+        
+        if created:
+            self.stdout.write(f"✅ Espécie 'bovino' criada")
+        else:
+            self.stdout.write(f"✅ Espécie 'bovino' já existe")
+        
+        # Criar raças bovinas
+        racas_criadas = 0
+        for nome_raca in self.RACAS_BOVINOS:
+            raca, created = RacaAnimal.objects.get_or_create(
+                nome=nome_raca,
+                especie=especie_bovina,
+                defaults={
+                    'origem': 'Brasil',
+                    'caracteristicas': f'Raça {nome_raca} - Características típicas da raça',
+                    'peso_medio_adulto_kg': 500.00,
+                    'ativo': True
+                }
+            )
+            if created:
+                racas_criadas += 1
+        
+        self.stdout.write(f"✅ {racas_criadas} raças bovinas criadas")
+        
+        # Retornar os objetos criados
+        especies = [especie_bovina]
+        racas = list(RacaAnimal.objects.filter(especie=especie_bovina))
+        
+        return especies, racas
 
     def criar_usuarios(self, options):
         """Cria usuários fictícios"""
@@ -410,13 +460,17 @@ class Command(BaseCommand):
         animais = []
         max_animais = options.get('animais', None)
 
-        # Buscar a espécie bovino
-        try:
-            especie_bovina = EspecieAnimal.objects.get(nome='bovino')
-        except EspecieAnimal.DoesNotExist:
-            self.stdout.write(self.style.ERROR(
-                "❌ Espécie 'bovino' não encontrada!"))
-            return []
+        # Buscar ou criar a espécie bovino
+        especie_bovina, created = EspecieAnimal.objects.get_or_create(
+            nome='bovino',
+            defaults={
+                'nome_display': 'Bovinos',
+                'peso_ua_referencia': 450,
+                'periodo_gestacao_dias': 285,
+                'idade_primeira_cobertura_meses': 24,
+                'ativo': True
+            }
+        )
 
         racas_bovinos = list(RacaAnimal.objects.filter(
             especie=especie_bovina, nome__in=self.RACAS_BOVINOS))
